@@ -1,29 +1,24 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config(); // Carga las variables del archivo .env
-
-const conectarDB = require('./config/db'); // Importamos la función de conexión
-
+require('dotenv').config();
+const conectarDB = require('./config/db');
 const app = express();
-
 // Conectar a la Base de Datos MongoDB Atlas
 conectarDB();
-
 // Middlewares
 app.use(cors());
 app.use(express.json());
-
-// Rutas
+// Enrutadores
 const productoRoutes = require('./routes/producto.routes');
+const usuarioRoutes = require('./routes/usuario.routes');
 app.use('/api/productos', productoRoutes);
-
-// Ruta de estado
+app.use('/api/usuarios', usuarioRoutes);
+// Endpoint de verificación
 app.get('/api/health', (req, res) => {
-  res.json({ estado: 'OK', timestamp: new Date() });
+ res.json({ estado: 'OK', timestamp: new Date() });
 });
-
-// Inicialización del Servidor
+// Inicio del Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`[SERVER] Escuchando en el puerto http://localhost:${PORT}`);
+ console.log(`[SERVER] Escuchando en el puerto http://localhost:${PORT}`);
 });
