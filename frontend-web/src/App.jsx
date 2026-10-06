@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+/*import { useEffect, useState } from "react";
 import './App.css'
+import logo from "./assets/logo.png";
 
 function App() {
   const [productos, setProductos] = useState([]);
@@ -115,10 +116,21 @@ function App() {
   };
 
   return (
-    <div>
-      <h1>Panel de Gestión de Productos</h1>
+    <div className="container">
 
-      {/* Formulario Dinámico (Crear / Actualizar) */}
+<div className="hero">
+<img className="logo" src={logo} alt="logo" ></img>
+
+
+<div className="hero-text">
+<h1>Lugar Turístico</h1>
+<p>Sistema de Gestión de Destinos Turísticos</p>
+</div>
+</div>
+
+      {
+//Formulario Dinámico (Crear / Actualizar) 
+}
       <form onSubmit={handleSubmit}>
         <h3>
           {editandoId ? "Modificar Producto" : "Formulario de Carga de Productos"}
@@ -185,4 +197,44 @@ function App() {
   );
 }
 
+export default App;*/
+
+
+/*
+
+import Menu from "./components/Menu";
+import logo from "./assets/logo.png";
+ 
+function App() {
+return (
+<div>
+<header className="encabezado">
+{logo}
+<h1>Portal Turístico</h1>
+</header>
+ 
+<Menu />
+</div>
+);
+}
+ 
+export default App;
+
+*/
+import logo from "./assets/logo.png"
+import './App.css'
+import Menu from "./Components/Menu"
+function App() {
+return (
+
+<div className="container">
+<header className="encabezado">
+<img className="logo" src={logo} alt="logo" ></img>
+<h1>Portal Turístico</h1>
+</header>
+<Menu />
+</div>
+
+);
+}
 export default App;

@@ -16,9 +16,11 @@ app.use(express.json());
 // Enrutadores
 const productoRoutes = require('./routes/producto.routes');
 const usuarioRoutes = require('./routes/usuario.routes');
+const lugarRoutes = require('./routes/lugar.routes');
 
 app.use('/api/productos', productoRoutes);
 app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/lugares', lugarRoutes);
 
 // Endpoint de verificación
 app.get('/api/health', (req, res) => {
