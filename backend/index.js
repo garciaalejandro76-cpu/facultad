@@ -22,6 +22,8 @@ app.use('/api/productos', productoRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/lugares', lugarRoutes);
 
+app.use("/images",express.static("images"));
+
 // Endpoint de verificación
 app.get('/api/health', (req, res) => {
   res.json({ estado: 'OK', timestamp: new Date() });

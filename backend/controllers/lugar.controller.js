@@ -3,15 +3,12 @@ const Lugar = require('../models/Lugar');
 // GET: Obtener todos los productos
 exports.obtenerLugares = async (req, res) => {
   try {
-    // Busca y retorna todos los documentos guardados en la colección
     const lugares = await Lugar.find();
-    // Responde con status 200 (OK) y envía el listado completo de productos
     res.status(200).json({ 
       ok: true, 
       datos: lugares 
     });
   } catch (error) {
-    // Manejo básico de errores enviando status 500 (Internal Server Error)
     res.status(500).json({ ok: false, mensaje: 'Error al obtener los lugares desde la base de datos' });
   }
 };
@@ -19,59 +16,64 @@ exports.obtenerLugares = async (req, res) => {
 // POST: Crear un nuevo producto
 exports.crearLugar = async (req, res) => {
   try {
-    // Extraemos los datos enviados en el cuerpo (Body) de la petición HTTP
-    const { nombre,descripcion,ubicacion,horario,imagen } = req.body;
+    const { nombre, descripcion, ubicacion, horario } = req.body;
 
-    // VALIDACIÓN: Si falta nombre o precio, respondemos con 400 (Bad Request)
     if (!nombre) {
       return res.status(400).json({ 
         ok: false, 
-        mensaje: 'El nombre es campos obligatorios' 
+        mensaje: 'El nombre es un campo obligatorio' 
       });
     }
 
-    // Instancia el modelo con los datos recibidos
     const nuevoLugar = new Lugar({
          nombre,
          descripcion,
          ubicacion,
          horario,
-         imagen
+         // Multer guarda la información del archivo en req.file si se seleccionó uno
+         imagen: req.file ? req.file.filename : null
     });
    
-    // Guardado de forma persistente en la DB
     const lugarGuardado = await nuevoLugar.save();
 
-    // Respondemos con status 201 (Created) enviando el objeto creado
     res.status(201).json({ 
       ok: true, 
       mensaje: 'Lugar guardado exitosamente en la base de datos', 
       datos: lugarGuardado 
     });
   } catch (error) {
-    res.status(500).json({ ok: false, mensaje: 'Error al guardar el lugar en la base de datos', error: error.mesagge });
+    // Se corrigió "error.mesagge" por "error.message"
+    res.status(500).json({ ok: false, mensaje: 'Error al guardar el lugar en la base de datos', error: error.message });
   }
 };
 
 // PUT: Actualizar un producto existente por su ID
 exports.actualizarLugar = async (req, res) => {
   try {
-    // Capturamos el ID enviado desde la URL (Path Parameter)
     const { id } = req.params;
+    
+    // 1. Clonamos los campos de texto normales que vienen en req.body
+    const camposAActualizar = { ...req.body };
+
+    // 2. Si el usuario subió una nueva imagen en el formulario, la agregamos al objeto de actualización
+    if (req.file) {
+      camposAActualizar.imagen = req.file.filename;
+    }
  
-    const lugarActualizado = await Lugar.findByIdAndUpdate(id, req.body, {new: true});
+    // 3. Pasamos el objeto combinado a la base de datos
+    const lugarActualizado = await Lugar.findByIdAndUpdate(id, camposAActualizar, { new: true });
 
-   if(!lugarActualizado){
-    return res.status(404).json({ok:false, mensaje: 'Lugar no encontrado en la base de datos'}); 
-   }
+    if (!lugarActualizado) {
+      return res.status(404).json({ ok: false, mensaje: 'Lugar no encontrado en la base de datos' }); 
+    }
 
-   res.status(200).json({
-    ok: true,
-    mensaje: 'Lugar actualizado correctamente en la DB',
-    datos: lugarActualizado
-   });
-  }catch (error){
-    res.status(500).json({ok: false, mensaje: 'Error al actualizar el lugar', error: error.message});
+    res.status(200).json({
+      ok: true,
+      mensaje: 'Lugar actualizado correctamente en la DB',
+      datos: lugarActualizado
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, mensaje: 'Error al actualizar el lugar', error: error.message });
   }
 };
 
@@ -80,11 +82,10 @@ exports.eliminarLugar = async (req, res) => {
   try {
     const { id } = req.params;
 
-    //Busca el producto por ID y lo elimina de la DB
     const lugarEliminado = await Lugar.findByIdAndDelete(id);
 
-    if(!lugarEliminado){
-      return res.status(404).json({ok: false, mensaje: 'Lugar no encontrado'});
+    if (!lugarEliminado) {
+      return res.status(404).json({ ok: false, mensaje: 'Lugar no encontrado' });
     }
 
     res.status(200).json({ 
@@ -92,6 +93,7 @@ exports.eliminarLugar = async (req, res) => {
       mensaje: 'Lugar eliminado correctamente de la base de datos' 
     });
   } catch (error) {
-    res.status(500).json({ ok: false, mensaje: 'Error al eliminar el lugar', error: error.mesagge});
+    // Se corrigió "error.mesagge" por "error.message"
+    res.status(500).json({ ok: false, mensaje: 'Error al eliminar el lugar', error: error.message });
   }
 };

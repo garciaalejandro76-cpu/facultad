@@ -1,33 +1,28 @@
-import { useState } from "react"
-import Lugares from "./Lugares"
-import Eventos from "./Eventos"
-import Comercios from "./Comercios"
+function Menu({ seccion, setSeccion }) {
+  return (
+    <nav className="menu">
+      <button
+        className={`menu-btn ${seccion === "lugares" ? "activo" : ""}`}
+        onClick={() => setSeccion("lugares")}
+      >
+        📍 Lugares
+      </button>
 
-function Menu() {
-const [seccion, setSeccion] = useState("lugares");
+      <button
+        className={`menu-btn ${seccion === "eventos" ? "activo" : ""}`}
+        onClick={() => setSeccion("eventos")}
+      >
+        📅 Eventos
+      </button>
 
-return (
-<div>
-<nav>
-<button onClick={() => setSeccion("lugares")}>
-Lugares
-</button>
-
-<button onClick={() => setSeccion("eventos")}>
-Eventos
-</button>
-
-<button onClick={() => setSeccion("comercios")}>
-Comercios
-</button>
-</nav>
-
-
-{seccion === "lugares" && <Lugares />}
-{seccion === "eventos" && <Eventos />}
-{seccion === "comercios" && <Comercios />}
-</div>
-);
+      <button
+        className={`menu-btn ${seccion === "comercios" ? "activo" : ""}`}
+        onClick={() => setSeccion("comercios")}
+      >
+        🛍️ Comercios
+      </button>
+    </nav>
+  );
 }
 
 export default Menu;
