@@ -181,6 +181,18 @@ function Lugares() {
       </section>
 
       <section className="panel-listado" aria-labelledby="titulo-listado">
+        
+<div className="filtro-contenedor">
+  <label htmlFor="filtro-zona" className="filtro-label">Filtrar por zona:</label>
+  <select id="filtro-zona" name="zona" defaultValue="" className="form-select-filtro">
+    <option value="" disabled>Seleccione una zona</option>
+    <option value="Todas">Todas las zonas</option>
+    <option value="Angualasto">Angualasto</option>
+    <option value="Rodeo">Rodeo</option>
+    <option value="Tudcum">Tudcum</option>
+  </select>
+</div>
+
         <h2 id="titulo-listado">Listado de Lugares <span className="contador">({lugares.length})</span></h2>
 
         {lugares.length === 0 ? (

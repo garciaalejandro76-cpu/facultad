@@ -1,3 +1,5 @@
+
+
 function Menu({ seccion, setSeccion }) {
   return (
     <nav className="menu">
@@ -20,6 +22,13 @@ function Menu({ seccion, setSeccion }) {
         onClick={() => setSeccion("comercios")}
       >
         🛍️ Comercios
+      </button>
+
+      <button
+        className={`menu-btn ${seccion === "destinos" ? "activo" : ""}`}
+        onClick={() => setSeccion("destinos")}
+      >
+        📌 Destinos
       </button>
     </nav>
   );

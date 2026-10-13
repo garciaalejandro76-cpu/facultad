@@ -5,6 +5,7 @@ import Menu from "./Components/Menu";
 import Lugares from "./Components/Lugares";
 import Eventos from "./Components/Eventos";
 import Comercios from "./Components/Comercios";
+import Destinos from "./Components/Destinos";
 
 function App() {
   // Trasladamos el estado de la sección activa aquí para separar la estructura
@@ -21,7 +22,14 @@ function App() {
               className="header-logo"
             />
           </div>
-          <h1 className="header-titulo">Gestión del Portal Turístico</h1>
+          
+
+<select name="categoria" defaultValue="" className="header-select">
+  <option value="Iglesia" >Iglesia San Juan</option>
+  <option value="Calingasta">Calingasta San Juan</option>
+  <option value="Valle Fretil">Valle Fertil San Juan</option>
+</select>
+
         </div>
         
         {/* Le pasamos el estado al menú para que pinte los botones */}
@@ -33,6 +41,7 @@ function App() {
         {seccion === "lugares" && <Lugares />}
         {seccion === "eventos" && <Eventos />}
         {seccion === "comercios" && <Comercios />}
+         {seccion === "destinos" && <Destinos />}
       </main>
     </div>
   );
