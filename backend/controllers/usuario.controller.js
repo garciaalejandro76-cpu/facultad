@@ -1,4 +1,6 @@
 const Usuario = require('../models/Usuario');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs'); // Requerido para encriptar si se actualiza password
 
 // 1. Obtener todos los usuarios (sin exponer la contraseña)
 exports.obtenerUsuarios = async (req, res) => {
@@ -64,15 +66,21 @@ exports.crearUsuario = async (req, res) => {
   }
 };
 
-// 4. Actualizar datos de un usuario
+// 4. Actualizar datos de un usuario (CORREGIDO PARA ADMITIR CAMBIO DE CONTRASEÑA SEGURO)
 exports.actualizarUsuario = async (req, res) => {
   try {
     const { id } = req.params;
-    const { password, ...restoDatos } = req.body;
+    const datosAActualizar = { ...req.body };
+
+    // Si el usuario envió una contraseña para actualizar, la encriptamos manualmente
+    if (datosAActualizar.password) {
+      const salt = await bcrypt.genSalt(10);
+      datosAActualizar.password = await bcrypt.hash(datosAActualizar.password, salt);
+    }
 
     const usuarioActualizado = await Usuario.findByIdAndUpdate(
       id,
-      restoDatos,
+      datosAActualizar,
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -103,5 +111,49 @@ exports.eliminarUsuario = async (req, res) => {
     res.status(200).json({ ok: true, mensaje: 'Usuario eliminado correctamente de la BD' });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: 'Error al eliminar usuario', error: error.message });
+  }
+};
+
+// 6. Autenticar Usuario (Login)
+exports.loginUsuario = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validar campos obligatorios
+    if (!email || !password) {
+      return res.status(400).json({ ok: false, mensaje: 'Email y contraseña son obligatorios' });
+    }
+
+    // Buscar si el usuario existe y si está activo
+    const usuario = await Usuario.findOne({ email });
+    if (!usuario || !usuario.activo) {
+      return res.status(400).json({ ok: false, mensaje: 'Credenciales inválidas o cuenta inactiva' });
+    }
+
+    // Validar contraseña usando el método del esquema
+    const esPasswordValido = await usuario.compararPassword(password);
+    if (!esPasswordValido) {
+      return res.status(400).json({ ok: false, mensaje: 'Credenciales inválidas' });
+    }
+
+    // Generar Token JWT 
+    const token = jwt.sign(
+      { id: usuario._id, rol: usuario.rol },
+      process.env.JWT_SECRET || 'TU_FIRMA_SECRETA',
+      { expiresIn: '15m' } 
+    );
+
+    // Ocultar contraseña en la respuesta JSON
+    const datosUsuario = usuario.toObject();
+    delete datosUsuario.password;
+
+    res.status(200).json({
+      ok: true,
+      mensaje: 'Inicio de sesión exitoso',
+      datos: datosUsuario,
+      token: token 
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, mensaje: 'Error en el servidor al iniciar sesión', error: error.message });
   }
 };

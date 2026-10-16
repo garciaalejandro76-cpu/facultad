@@ -8,4 +8,7 @@ router.post('/', usuarioController.crearUsuario);
 router.put('/:id', usuarioController.actualizarUsuario);
 router.delete('/:id', usuarioController.eliminarUsuario);
 
+// NUEVA RUTA PARA EL LOGIN
+router.post('/login', usuarioController.loginUsuario);
+
 module.exports = router;
