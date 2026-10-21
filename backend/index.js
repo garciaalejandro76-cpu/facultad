@@ -17,10 +17,12 @@ app.use(express.json());
 const productoRoutes = require('./routes/producto.routes');
 const usuarioRoutes = require('./routes/usuario.routes');
 const lugarRoutes = require('./routes/lugar.routes');
+const destinosRouter = require('./routes/destino.routes');
 
 app.use('/api/productos', productoRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/lugares', lugarRoutes);
+app.use('/api/destinos', destinosRouter);
 
 app.use("/images",express.static("images"));
 

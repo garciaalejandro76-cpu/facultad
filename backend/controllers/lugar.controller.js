@@ -1,99 +1,79 @@
 const Lugar = require('../models/Lugar');
 
-// GET: Obtener todos los productos
+// GET: Obtener lugares (soporta filtros opcionales de destino y zona vía Query Params)
 exports.obtenerLugares = async (req, res) => {
   try {
-    const lugares = await Lugar.find();
-    res.status(200).json({ 
-      ok: true, 
-      datos: lugares 
-    });
+    const query = {};
+    
+    // Si vienen los filtros desde el frontend, los aplicamos a la búsqueda
+    if (req.query.destino) query.destino = req.query.destino;
+    if (req.query.zona) query.zona = req.query.zona;
+
+    const lugares = await Lugar.find(query)
+      .populate('destino')
+      .populate('zona');
+
+    res.status(200).json({ ok: true, datos: lugares });
   } catch (error) {
-    res.status(500).json({ ok: false, mensaje: 'Error al obtener los lugares desde la base de datos' });
+    res.status(500).json({ ok: false, mensaje: 'Error al obtener los lugares', error: error.message });
   }
 };
 
-// POST: Crear un nuevo producto
+// POST: Crear un nuevo lugar relacionándolo con un Destino y una Zona
 exports.crearLugar = async (req, res) => {
   try {
-    const { nombre, descripcion, ubicacion, horario } = req.body;
+    const { nombre, descripcion, destino, zona, horario } = req.body;
 
-    if (!nombre) {
-      return res.status(400).json({ 
-        ok: false, 
-        mensaje: 'El nombre es un campo obligatorio' 
-      });
+    if (!nombre || !destino || !zona) {
+      return res.status(400).json({ ok: false, mensaje: 'Nombre, Destino y Zona son campos obligatorios' });
     }
 
     const nuevoLugar = new Lugar({
          nombre,
          descripcion,
-         ubicacion,
+         destino, // ID de la entidad Destino
+         zona,    // ID de la entidad Zona
          horario,
-         // Multer guarda la información del archivo en req.file si se seleccionó uno
          imagen: req.file ? req.file.filename : null
     });
    
     const lugarGuardado = await nuevoLugar.save();
-
-    res.status(201).json({ 
-      ok: true, 
-      mensaje: 'Lugar guardado exitosamente en la base de datos', 
-      datos: lugarGuardado 
-    });
+    res.status(201).json({ ok: true, mensaje: 'Lugar guardado exitosamente', datos: lugarGuardado });
   } catch (error) {
-    // Se corrigió "error.mesagge" por "error.message"
-    res.status(500).json({ ok: false, mensaje: 'Error al guardar el lugar en la base de datos', error: error.message });
+    res.status(500).json({ ok: false, mensaje: 'Error al guardar el lugar', error: error.message });
   }
 };
 
-// PUT: Actualizar un producto existente por su ID
+// PUT: Actualizar un lugar existente
 exports.actualizarLugar = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // 1. Clonamos los campos de texto normales que vienen en req.body
     const camposAActualizar = { ...req.body };
 
-    // 2. Si el usuario subió una nueva imagen en el formulario, la agregamos al objeto de actualización
     if (req.file) {
       camposAActualizar.imagen = req.file.filename;
     }
  
-    // 3. Pasamos el objeto combinado a la base de datos
     const lugarActualizado = await Lugar.findByIdAndUpdate(id, camposAActualizar, { new: true });
 
     if (!lugarActualizado) {
-      return res.status(404).json({ ok: false, mensaje: 'Lugar no encontrado en la base de datos' }); 
+      return res.status(404).json({ ok: false, mensaje: 'Lugar no encontrado' }); 
     }
 
-    res.status(200).json({
-      ok: true,
-      mensaje: 'Lugar actualizado correctamente en la DB',
-      datos: lugarActualizado
-    });
+    res.status(200).json({ ok: true, mensaje: 'Lugar actualizado correctamente', datos: lugarActualizado });
   } catch (error) {
     res.status(500).json({ ok: false, mensaje: 'Error al actualizar el lugar', error: error.message });
   }
 };
 
-// DELETE: Eliminar un producto por su ID
+// El método eliminarLugar se mantiene exactamente igual al que ya posees.
 exports.eliminarLugar = async (req, res) => {
   try {
     const { id } = req.params;
-
     const lugarEliminado = await Lugar.findByIdAndDelete(id);
-
-    if (!lugarEliminado) {
-      return res.status(404).json({ ok: false, mensaje: 'Lugar no encontrado' });
-    }
-
-    res.status(200).json({ 
-      ok: true, 
-      mensaje: 'Lugar eliminado correctamente de la base de datos' 
-    });
+    if (!lugarEliminado) return res.status(404).json({ ok: false, mensaje: 'Lugar no encontrado' });
+    res.status(200).json({ ok: true, mensaje: 'Lugar eliminado correctamente' });
   } catch (error) {
-    // Se corrigió "error.mesagge" por "error.message"
     res.status(500).json({ ok: false, mensaje: 'Error al eliminar el lugar', error: error.message });
   }
 };

@@ -1,36 +1,40 @@
 const mongoose = require('mongoose');
 
-// Definimos el esquema o la estructura que tendrán los documentos en Mongo DB
 const lugarSchema = new mongoose.Schema({
     nombre: {
         type: String,
-        required: [true, 'El nombre del campo es obligatorio'],
+        required: [true, 'El nombre es obligatorio'],
         trim: true
     },
     descripcion: {
         type: String,
-        required: [true, 'El nombre del campo es obligatorio'],
+        required: [true, 'La descripción es obligatoria'],
         trim: true
     },
-    ubicacion: {
-        type: String,
-        required: [true, 'El nombre del campo es obligatorio'],
-        trim: true
+    // Relación con el Destino elegido
+    destino: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Destino',
+        required: [true, 'El destino es obligatorio']
+    },
+    // Relación con la Zona perteneciente a ese destino
+    zona: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Zona',
+        required: [true, 'La zona es obligatoria']
     },
     horario: {
         type: String,
-        required: [true, 'El nombre del campo es obligatorio'],
+        required: [true, 'El horario es obligatorio'],
         trim: true
     },
     imagen: {
         type: String,
-        required: [true, 'El nombre del campo es obligatorio'],
+        required: [true, 'La imagen es obligatoria'],
         trim: true
     }
 }, {
-    // Genera automaticamente los campos de createdAt y updateAt (fechas)
     timestamps: true
 });
 
-// Ecportamos el modelo para usarlo en los controladores
 module.exports = mongoose.model('Lugar', lugarSchema, 'lugares');

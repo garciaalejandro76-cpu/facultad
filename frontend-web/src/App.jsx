@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import logo from "./assets/logo.png";
 import './app.css';
 import Menu from "./Components/Menu";
@@ -6,62 +6,65 @@ import Lugares from "./Components/Lugares";
 import Eventos from "./Components/Eventos";
 import Comercios from "./Components/Comercios";
 import Destinos from "./Components/Destinos";
-
-// 1. Importamos el proveedor y el hook de autenticación
 import { AuthProvider, useAuth } from "./context/AuthContext";
-// 2. Importamos el componente de Login que creamos previamente
 import { Login } from "./Components/Login";
 
-// Creamos un subcomponente interno para manejar la lógica de la app una vez iniciada la sesión
 function ContenidoPanel() {
   const [seccion, setSeccion] = useState("lugares");
-  // Extraemos la función logout y los datos del usuario por si quieres mostrar su nombre
+  const [destinos, setDestinos] = useState([]);
+  const [destinoSeleccionadoId, setDestinoSeleccionadoId] = useState(""); // Guarda el ID del destino activo
   const { usuario, logout } = useAuth();
+
+  // Cargamos la lista de destinos reales de la DB para poblar el select del Header
+  useEffect(() => {
+    fetch(import.meta.env.VITE_BACKEND_URL + "/api/destinos")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok && data.datos.length > 0) {
+          setDestinos(data.datos);
+          setDestinoSeleccionadoId(data.datos[0]._id); // Inicializa con el primer destino por defecto
+        }
+      })
+      .catch((err) => console.error("Error al traer destinos en App:", err));
+  }, []);
 
   return (
     <div className="container-app">
       <header className="header-sitio">
         <div className="header-brand">
           <div className="header-logo-wrapper">
-            <img 
-              src={logo} 
-              alt="Logotipo oficial de Gestión Turística" 
-              className="header-logo"
-            />
+            <img src={logo} alt="Logotipo oficial de Gestión Turística" className="header-logo" />
           </div>
 
-          <select name="categoria" defaultValue="" className="header-select">
-            <option value="Iglesia">Iglesia San Juan</option>
-            <option value="Calingasta">Calingasta San Juan</option>
-            <option value="Valle Fretil">Valle Fertil San Juan</option>
+          {/* El select ahora es dinámico con datos de la DB */}
+          <select 
+            name="destino-activo" 
+            value={destinoSeleccionadoId} 
+            onChange={(e) => setDestinoSeleccionadoId(e.target.value)} 
+            className="header-select"
+          >
+            {destinos.length === 0 && <option value="">Cargando destinos...</option>}
+            {destinos.map((dest) => (
+              <option key={dest._id} value={dest._id}>
+                {dest.nombre}
+              </option>
+            ))}
           </select>
         </div>
         
-        {/* Le pasamos el estado al menú para que pinte los botones */}
         <Menu seccion={seccion} setSeccion={setSeccion} /> 
 
-        {/* Botón de cerrar sesión integrado en el header */}
         <div className="header-logout-container" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '0.9rem', color: '#555' }}>Hola, {usuario?.nombre}</span>
-          <button 
-            onClick={logout} 
-            style={{
-              padding: '6px 12px',
-              backgroundColor: '#e74c3c',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
+          <button onClick={logout} style={{ padding: '6px 12px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
             Salir
           </button>
         </div>
       </header>
 
-      {/* El contenido ahora vive COMPLETAMENTE FUERA del header. Esto arregla el modo web */}
       <main className="contenido">
-        {seccion === "lugares" && <Lugares />}
+        {/* ENVIAMOS EL DESTINO SELECCIONADO COMO PROP A LUGARES */}
+        {seccion === "lugares" && <Lugares destinoActivoId={destinoSeleccionadoId} />}
         {seccion === "eventos" && <Eventos />}
         {seccion === "comercios" && <Comercios />}
         {seccion === "destinos" && <Destinos />}
@@ -70,20 +73,12 @@ function ContenidoPanel() {
   );
 }
 
-// Componente principal que decide si mostrar el Login o el Panel Turístico
 function App() {
   const { estaAutenticado } = useAuth();
-
-  // Si no está logueado, lo obligamos a ver el formulario de Login
-  if (!estaAutenticado) {
-    return <Login />;
-  }
-
-  // Si está logueado, renderiza la estructura original de tu aplicación
+  if (!estaAutenticado) return <Login />;
   return <ContenidoPanel />;
 }
 
-// Exportamos la aplicación envuelta de manera obligatoria en el AuthProvider para que funcione useAuth()
 export default function AppConAutenticacion() {
   return (
     <AuthProvider>
