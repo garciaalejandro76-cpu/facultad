@@ -65,7 +65,7 @@ function ContenidoPanel() {
       <main className="contenido">
         {/* ENVIAMOS EL DESTINO SELECCIONADO COMO PROP A LUGARES */}
         {seccion === "lugares" && <Lugares destinoActivoId={destinoSeleccionadoId} />}
-        {seccion === "eventos" && <Eventos />}
+        {seccion === "eventos" && <Eventos destinoActivoId={destinoSeleccionadoId} />}
         {seccion === "prestadores" && <Prestadores destinoActivoId={destinoSeleccionadoId} />}
         {seccion === "destinos" && <Destinos />}
       </main>
