@@ -1,0 +1,258 @@
+import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext"; // Usando el hook personalizado de tu contexto
+
+function Prestadores({ destinoActivoId }) {
+  const { usuario } = useAuth(); // Extracción limpia del usuario de la sesión
+  
+  const [prestadores, setPrestadores] = useState([]);
+  const [titulo, setTitulo] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [categoria, setCategoria] = useState("");
+  const [imagen, setImagen] = useState(null);
+  const [editandoId, setEditandoId] = useState(null);
+
+  // Selectores dinámicos del Formulario e Historial
+  const [destinosLista, setDestinosLista] = useState([]);
+  const [zonasFiltradasForm, setZonasFiltradasForm] = useState([]);
+  const [destinoForm, setDestinoForm] = useState("");
+  const [zonaForm, setZonaForm] = useState("");
+  const [filtroZonaListado, setFiltroZonaListado] = useState("");
+
+  // 1. Cargar destinos al inicializar
+  useEffect(() => {
+    fetch(import.meta.env.VITE_BACKEND_URL + "/api/destinos")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) setDestinosLista(data.datos);
+      })
+      .catch((err) => console.error("Error al cargar destinos secundarios:", err));
+  }, []);
+
+  // 2. Filtrado en cascada para las zonas del formulario
+  useEffect(() => {
+    if (destinoForm) {
+      const encontrado = destinosLista.find(d => d._id === destinoForm);
+      setZonasFiltradasForm(encontrado && Array.isArray(encontrado.zonas) ? encontrado.zonas : []);
+    } else {
+      setZonasFiltradasForm([]);
+    }
+  }, [destinoForm, destinosLista]);
+
+  // 3. Obtener listado desde la API con Query Params
+  const cargarPrestadoresFiltrados = () => {
+    if (!destinoActivoId) return;
+    let url = `${import.meta.env.VITE_BACKEND_URL}/api/prestadores?destino=${destinoActivoId}`;
+    if (filtroZonaListado && filtroZonaListado !== "") {
+      url += `&zona=${filtroZonaListado}`;
+    }
+
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) setPrestadores(data.datos);
+      })
+      .catch((err) => console.error("Error al mapear prestadores:", err));
+  };
+
+  useEffect(() => {
+    setFiltroZonaListado("");
+    cargarPrestadoresFiltrados();
+  }, [destinoActivoId]);
+
+  useEffect(() => {
+    cargarPrestadoresFiltrados();
+  }, [filtroZonaListado]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append("titulo", titulo);
+    formData.append("descripcion", descripcion);
+    formData.append("categoria", categoria);
+    formData.append("zona", zonaForm);
+    formData.append("usuario", usuario?._id || "ID_DE_PRUEBA");
+
+    if (imagen && typeof imagen !== "string") {
+      formData.append("imagen", imagen);
+    }
+
+    const urlBase = `${import.meta.env.VITE_BACKEND_URL}/api/prestadores`;
+    const urlFetch = editandoId ? `${urlBase}/${editandoId}` : urlBase;
+    const metodo = editandoId ? "PUT" : "POST";
+
+    fetch(urlFetch, { method: metodo, body: formData })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) {
+          cancelarEdicion();
+          cargarPrestadoresFiltrados();
+        } else {
+          alert("Error: " + data.mensaje);
+        }
+      })
+      .catch((err) => console.error("Error en submit:", err));
+  };
+
+  const handleDelete = (id) => {
+    if (!window.confirm("¿Remover prestador de servicios?")) return;
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/prestadores/${id}`, { method: "DELETE" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) {
+          if (editandoId === id) cancelarEdicion();
+          cargarPrestadoresFiltrados();
+        }
+      });
+  };
+
+  const handleEditarClick = (p) => {
+    setEditandoId(p._id);
+    setTitulo(p.titulo);
+    setDescripcion(p.descripcion);
+    setCategoria(p.categoria);
+    
+    const destinoIdPadre = p.zona?.destino?._id || p.zona?.destino || "";
+    setDestinoForm(destinoIdPadre);
+    setZonaForm(p.zona?._id || "");
+    setImagen(p.imagen);
+  };
+
+  const cancelarEdicion = () => {
+    setEditandoId(null);
+    setTitulo("");
+    setDescripcion("");
+    setCategoria("");    
+    setDestinoForm("");
+    setZonaForm("");
+    setImagen(null);
+  };
+
+  const obtenerZonasDelDestinoActivo = () => {
+    const actual = destinosLista.find(d => d._id === destinoActivoId);
+    return actual && Array.isArray(actual.zonas) ? actual.zonas : [];
+  };
+
+  return (
+    <div className="seccion-prestadores">
+      <section className="panel-formulario">
+        <h2>{editandoId ? "Modificar Prestador" : "Registrar Nuevo Prestador"}</h2>
+        <form onSubmit={handleSubmit} className="formulario-carga">
+          <div className="form-group">
+            <label htmlFor="titulo">Nombre / Título Comercial</label>
+            <input id="titulo" type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="descripcion">Descripción del Servicio</label>
+            <textarea id="descripcion" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="categoria">Categoría</label>
+            <select id="categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)} required>
+              <option value="">Seleccione Categoría</option>
+              <option value="Gastronomia">Gastronomía</option>
+              <option value="Alojamiento">Alojamiento y Hospedaje</option>
+              <option value="Guiado">Excursiones y Guiados</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="destinoForm">Destino</label>
+            <select id="destinoForm" value={destinoForm} onChange={(e) => { setDestinoForm(e.target.value); setZonaForm(""); }} required>
+              <option value="">Seleccione Destino</option>
+              {destinosLista.map(d => <option key={d._id} value={d._id}>{d.nombre}</option>)}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="zonaForm">Zona</label>
+            <select id="zonaForm" value={zonaForm} onChange={(e) => setZonaForm(e.target.value)} required disabled={!destinoForm}>
+              <option value="">Seleccione Zona</option>
+              {zonasFiltradasForm.map(z => <option key={z._id} value={z._id}>{z.nombre}</option>)}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="imagen">Imagen Comercial</label>
+            <input id="imagen" type="file" accept="image/*" onChange={(e) => setImagen(e.target.files[0])} />
+          </div>
+
+          <div className="form-acciones">
+            <button type="submit" className="btn btn-primario">{editandoId ? "Actualizar" : "Guardar"}</button>
+            {editandoId && <button type="button" onClick={cancelarEdicion} className="btn btn-secundario">Cancelar</button>}
+          </div>
+        </form>
+      </section>
+
+      <section className="panel-listado" aria-labelledby="titulo-listado">
+        {/* FILTRO DINÁMICO TOTALMENTE SINCRONIZADO AL DESTINO DEL HEADER */}
+        <div className="filtro-contenedor" style={{ marginBottom: "15px" }}>
+          <label htmlFor="filtro-zona" className="filtro-label">Filtrar por zona:</label>
+          <select 
+            id="filtro-zona" 
+            value={filtroZonaListado} 
+            onChange={(e) => setFiltroZonaListado(e.target.value)} 
+            className="form-select-filtro"
+          >
+            <option value="">Todas las zonas</option>
+            {obtenerZonasDelDestinoActivo().map((z) => (
+              <option key={z._id} value={z._id}>{z.nombre}</option>
+            ))}
+          </select>
+        </div>
+
+        <h2 id="titulo-listado">Listado de Prestadores <span className="contador">({prestadores.length})</span></h2>
+
+        {prestadores.length === 0 ? (
+          <p className="mensaje-vacio">No se encontraron prestadores cargados para este destino o zona.</p>
+        ) : (
+          <div className="grid-lugares">
+            {prestadores.map((p) => (
+              <article key={p._id} className="tarjeta-lugar">
+                <div className="tarjeta-imagen-contenedor">
+                  <img 
+                    src={`${import.meta.env.VITE_BACKEND_URL}/images/${p.imagen}`} 
+                    alt={`Fotografía de ${p.titulo}`} 
+                    className="tarjeta-img" 
+                  />
+                </div>
+                
+                <div className="tarjeta-info">
+                  <h3 className="tarjeta-titulo-lugar">
+                    {p.titulo} 
+                  </h3>
+                  <p className="descripcion">{p.descripcion}</p>
+                  
+                  {/* Se acopla a las clases de metadatos con iconos */}
+                  <div className="tarjeta-metadatos">
+                    <div className="detalles">
+                      <span className="badge-icon">🏷️</span>
+                      <span className="badge-texto" style={{ fontWeight: '600' }}>{p.categoria}</span>
+                    </div>
+                    <div className="detalles">
+                      <span className="badge-icon">🗺️</span>
+                      <span className="badge-texto">{p.zona?.destino?.nombre || "Destino"} — {p.zona?.nombre || "Zona"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botones inferiores con formato de cuadrícula simétrica */}
+                <div className="tarjeta-acciones">
+                  <button type="button" onClick={() => handleEditarClick(p)} className="btn btn-editar">
+                    Editar datos
+                  </button>
+                  <button type="button" onClick={() => handleDelete(p._id)} className="btn btn-eliminar">
+                    Eliminar
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+export default Prestadores;

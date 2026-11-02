@@ -228,29 +228,48 @@ body {
   }
 }
 /* ==========================================================================
-   VISTA LUGARES (Dashboard de Dos Columnas)
+   VISTA DE DASHBOARDS EN DOS COLUMNAS (Lugares, Prestadores y Destinos)
    ========================================================================== */
-.seccion-lugares {
+.seccion-lugares, 
+.seccion-prestadores,
+.seccion-destinos {
   display: grid;
   grid-template-columns: 380px 1fr;
   gap: 30px;
   align-items: start;
 }
 
+/* Reutilización del Grid de tarjetas de la app */
+.grid-destinos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* Heredar diseño de tarjetas unificadas */
+.tarjeta-destino {
+  background: var(--white);
+  border: 1px solid #edf2f7;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tarjeta-destino:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
 @media (max-width: 1024px) {
-  .header-sitio {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-  .header-brand {
-    flex-direction: column;
-  }
-  .seccion-lugares {
+  .seccion-lugares, 
+  .seccion-prestadores,
+  .seccion-destinos {
     grid-template-columns: 1fr;
   }
 }
-
 /* ==========================================================================
    PANEL FORMULARIO
    ========================================================================== */

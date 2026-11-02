@@ -4,7 +4,7 @@ import './app.css';
 import Menu from "./Components/Menu";
 import Lugares from "./Components/Lugares";
 import Eventos from "./Components/Eventos";
-import Comercios from "./Components/Comercios";
+import Prestadores from "./Components/Prestadores";
 import Destinos from "./Components/Destinos";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Login } from "./Components/Login";
@@ -66,7 +66,7 @@ function ContenidoPanel() {
         {/* ENVIAMOS EL DESTINO SELECCIONADO COMO PROP A LUGARES */}
         {seccion === "lugares" && <Lugares destinoActivoId={destinoSeleccionadoId} />}
         {seccion === "eventos" && <Eventos />}
-        {seccion === "comercios" && <Comercios />}
+        {seccion === "prestadores" && <Prestadores destinoActivoId={destinoSeleccionadoId} />}
         {seccion === "destinos" && <Destinos />}
       </main>
     </div>

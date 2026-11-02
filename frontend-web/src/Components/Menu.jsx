@@ -18,10 +18,10 @@ function Menu({ seccion, setSeccion }) {
       </button>
 
       <button
-        className={`menu-btn ${seccion === "comercios" ? "activo" : ""}`}
-        onClick={() => setSeccion("comercios")}
+        className={`menu-btn ${seccion === "prestadores" ? "activo" : ""}`}
+        onClick={() => setSeccion("prestadores")}
       >
-        🛍️ Comercios
+        🛍️ Prestadores
       </button>
 
       <button

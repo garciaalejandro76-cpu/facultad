@@ -118,20 +118,21 @@ function Destinos() {
 
   return (
     <div className="seccion-destinos">
-      <section className="panel-formulario">
-        <h2>{editandoId ? "Modificar Destino" : "Cargar Nuevo Destino"}</h2>
+      {/* PANEL IZQUIERDO: FORMULARIO */}
+      <section className="panel-formulario" aria-labelledby="titulo-formulario">
+        <h2 id="titulo-formulario">{editandoId ? "Modificar Destino" : "Cargar Nuevo Destino"}</h2>
         <form onSubmit={handleSubmit} className="formulario-carga">
           <div className="form-group">
             <label>Nombre del Destino</label>
-            <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+            <input type="text" placeholder="Ej. San Juan" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
           </div>
           <div className="form-group">
             <label>Descripción</label>
-            <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
+            <textarea placeholder="Añade una descripción breve..." value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
           </div>    
           <div className="form-group">
             <label>Administrador</label>
-            <input type="text" value={administrador} onChange={(e) => setAdministrador(e.target.value)} required />
+            <input type="text" placeholder="Nombre del encargado" value={administrador} onChange={(e) => setAdministrador(e.target.value)} required />
           </div>        
           <div className="form-group">
             <label>Zonas del Destino</label>
@@ -142,8 +143,8 @@ function Destinos() {
             {zonas.length > 0 && (
               <ul style={{ marginTop: "10px", paddingLeft: "20px" }}>
                 {zonas.map((zona, index) => (
-                  <li key={index}>
-                    {zona} <button type="button" onClick={() => handleEliminarZona(index)} style={{ color: "red", border: "none", background: "none", cursor: "pointer" }}>(Quitar)</button>
+                  <li key={index} style={{ marginBottom: "5px", fontSize: "0.95rem" }}>
+                    📍 {zona} <button type="button" onClick={() => handleEliminarZona(index)} style={{ color: "var(--danger)", border: "none", background: "none", cursor: "pointer", marginLeft: "5px", fontWeight: "600" }}>(Quitar)</button>
                   </li>
                 ))}
               </ul>
@@ -156,35 +157,46 @@ function Destinos() {
         </form>
       </section>
 
-      <section className="panel-listado">
-        <h2>Listado de Destinos <span className="contador">({destinos.length})</span></h2>
+      {/* PANEL DERECHO: LISTADO */}
+      <section className="panel-listado" aria-labelledby="titulo-listado">
+        <h2 id="titulo-listado">Listado de Destinos <span className="contador">({destinos.length})</span></h2>
         {destinos.length === 0 ? (
-          <p>No se encontraron destinos cargados.</p>
+          <p className="mensaje-vacio">No se encontraron destinos cargados.</p>
         ) : (
           <div className="grid-destinos">
             {destinos.map((destino) => (
               <article key={destino._id} className="tarjeta-destino">
                 <div className="tarjeta-info">
-                  <h3>{destino.nombre}</h3>
-                  <p>{destino.descripcion}</p>
+                  <h3 className="tarjeta-titulo-lugar">{destino.nombre}</h3>
+                  <p className="descripcion">{destino.descripcion}</p>
+                  
                   <div className="tarjeta-metadatos">
-                    <p>👤 Admin: {destino.administrador}</p>
+                    <div className="detalles">
+                      <span className="badge-icon">👤</span>
+                      <span className="badge-texto"><strong>Admin:</strong> {destino.administrador}</span>
+                    </div>
                     
-                    {/* CAMBIO CLAVE AQUÍ: Se mapean los objetos zonas usando su zona._id propio */}
                     {destino.zonas && destino.zonas.length > 0 && (
                       <div style={{ marginTop: "10px" }}>
-                        📍 <strong>Zonas independientes:</strong>{" "}
-                        {destino.zonas.map((zona) => (
-                          <span key={zona._id} title={`ID de la zona: ${zona._id}`} style={{ marginRight: "8px", background: "#eee", padding: "2px 6px", borderRadius: "4px", fontSize: "12px" }}>
-                            {zona.nombre}
-                          </span>
-                        ))}
+                        <span className="badge-icon">📍</span> <strong>Zonas asociadas:</strong>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
+                          {destino.zonas.map((zona) => (
+                            <span 
+                              key={zona._id} 
+                              title={`ID de la zona: ${zona._id}`} 
+                              style={{ background: "#edf2f7", padding: "4px 8px", borderRadius: "4px", fontSize: "11px", color: "var(--text-main)", fontWeight: "500" }}
+                            >
+                              {zona.nombre}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
+                
                 <div className="tarjeta-acciones">
-                  <button type="button" onClick={() => handleEditarClick(destino)} className="btn btn-editar">Editar</button>
+                  <button type="button" onClick={() => handleEditarClick(destino)} className="btn btn-editar">Editar datos</button>
                   <button type="button" onClick={() => handleDelete(destino._id)} className="btn btn-eliminar">Eliminar</button>
                 </div>
               </article>

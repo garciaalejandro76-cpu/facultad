@@ -18,13 +18,15 @@ const productoRoutes = require('./routes/producto.routes');
 const usuarioRoutes = require('./routes/usuario.routes');
 const lugarRoutes = require('./routes/lugar.routes');
 const destinosRouter = require('./routes/destino.routes');
+const prestadorRoutes = require('./routes/prestador.routes'); // 👈 NUEVO: Enrutador de Prestadores
 
 app.use('/api/productos', productoRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/lugares', lugarRoutes);
 app.use('/api/destinos', destinosRouter);
+app.use('/api/prestadores', prestadorRoutes); // 👈 NUEVO: Endpoint base asignado
 
-app.use("/images",express.static("images"));
+app.use("/images", express.static("images"));
 
 // Endpoint de verificación
 app.get('/api/health', (req, res) => {
