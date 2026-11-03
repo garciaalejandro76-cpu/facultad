@@ -23,8 +23,10 @@ const usuarioSchema = new mongoose.Schema({
   },
   rol: {
     type: String,
-    enum: ['admin', 'empleado', 'cliente'],
-    default: 'cliente'
+    // ⬇️ CORREGIDO: Se eliminó la doble coma del arreglo
+    enum: ['admin', 'usuario', 'prestador', 'admin_destino', 'admin_lugar'], 
+    // ⬇️ CORREGIDO: Cambiado a 'usuario' para que coincida con tu nueva lógica por defecto
+    default: 'usuario' 
   },
   activo: {
     type: Boolean,
@@ -35,12 +37,12 @@ const usuarioSchema = new mongoose.Schema({
 });
 
 // 2. SEGUNDO: Añadimos los hooks y métodos al esquema ya creado
-// Encriptar contraseña automáticamente antes de guardar un usuario nuevo
-usuarioSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+// Encriptar contraseña automáticamente antes de guardar un usuario nuevo (Optimizado sin next para async)
+usuarioSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
+  
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 // Método personalizado para comparar contraseñas en el controlador de Login

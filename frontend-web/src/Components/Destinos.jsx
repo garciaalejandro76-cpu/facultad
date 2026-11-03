@@ -5,7 +5,7 @@ function Destinos() {
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [administrador, setAdministrador] = useState("");
-  const [zonas, setZonas] = useState([]); // Maneja strings en el formulario
+  const [zonas, setZonas] = useState([]); // Maneja objetos [{_id, nombre}, {nombre}]
   const [nuevaZona, setNuevaZona] = useState(""); 
   const [editandoId, setEditandoId] = useState(null);
 
@@ -24,7 +24,7 @@ function Destinos() {
 
   const handleAgregarZona = () => {
     if (nuevaZona.trim() !== "") {
-      setZonas([...zonas, nuevaZona.trim()]);
+      setZonas([...zonas, { nombre: nuevaZona.trim() }]);
       setNuevaZona(""); 
     }
   };
@@ -33,75 +33,14 @@ function Destinos() {
     setZonas(zonas.filter((_, index) => index !== indexParaEliminar));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append("nombre", nombre);
-    formData.append("descripcion", descripcion);
-    formData.append("administrador", administrador);
-    formData.append("zonas", JSON.stringify(zonas)); // Se envía la lista de strings
-
-    if (editandoId) {
-      fetch(`${import.meta.env.VITE_BACKEND_URL}/api/destinos/${editandoId}`, {
-        method: "PUT",
-        body: formData, 
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.ok) {
-            cancelarEdicion();
-            cargarDestinos();
-          } else {
-            alert("Error al actualizar: " + data.mensaje);
-          }
-        })
-        .catch((err) => console.error("Error al editar:", err));
-    } else {
-      fetch(import.meta.env.VITE_BACKEND_URL + "/api/destinos", {
-        method: "POST",
-        body: formData,
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.ok) {
-            cancelarEdicion();
-            cargarDestinos();
-          } else {
-            alert("Error: " + data.mensaje);
-          }
-        })
-        .catch((err) => console.error("Error al guardar:", err));
-    }
-  };
-
-  const handleDelete = (id) => {
-    const confirmar = window.confirm("¿Seguro que deseas eliminar este destino?");
-    if (!confirmar) return;
-
-    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/destinos/${id}`, {
-      method: "DELETE",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.ok) {
-          if (editandoId === id) cancelarEdicion();
-          cargarDestinos();
-        } else {
-          alert("Error al eliminar: " + data.mensaje);
-        }
-      })
-      .catch((err) => console.error("Error al eliminar:", err));
-  };
-
   const handleEditarClick = (destino) => {
     setEditandoId(destino._id);
     setNombre(destino.nombre);
     setDescripcion(destino.descripcion);
     setAdministrador(destino.administrador);
     
-    // Mapeamos el objeto completo devuelto por Populate a strings simples para el formulario
     if (destino.zonas && Array.isArray(destino.zonas)) {
-      setZonas(destino.zonas.map(z => typeof z === 'object' ? z.nombre : z));
+      setZonas(destino.zonas.map(z => typeof z === 'object' ? { _id: z._id, nombre: z.nombre } : { nombre: z }));
     } else {
       setZonas([]);
     }
@@ -114,6 +53,57 @@ function Destinos() {
     setAdministrador("");
     setZonas([]);
     setNuevaZona("");
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // 💡 CLAVE: Al no haber fotos, construimos un objeto JSON limpio
+    const datosDestino = {
+      nombre,
+      descripcion,
+      administrador,
+      zonas // Enviamos la lista de objetos de zona directamente
+    };
+
+    const urlBase = `${import.meta.env.VITE_BACKEND_URL}/api/destinos`;
+    const urlFetch = editandoId ? `${urlBase}/${editandoId}` : urlBase;
+    const metodo = editandoId ? "PUT" : "POST";
+
+    fetch(urlFetch, {
+      method: metodo,
+      headers: {
+        "Content-Type": "application/json" // Le avisa al servidor Express que procese el texto como JSON
+      },
+      body: JSON.stringify(datosDestino), 
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) {
+          cancelarEdicion();
+          cargarDestinos();
+        } else {
+          alert("Error en la operación: " + data.mensaje);
+        }
+      })
+      .catch((err) => console.error("Error al procesar destino:", err));
+  };
+
+  const handleDelete = (id) => {
+    const confirmar = window.confirm("¿Seguro que deseas eliminar este destino?");
+    if (!confirmar) return;
+
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/destinos/${id}`, { method: "DELETE" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) {
+          if (editandoId === id) cancelarEdicion();
+          cargarDestinos();
+        } else {
+          alert("Error al eliminar: " + data.mensaje);
+        }
+      })
+      .catch((err) => console.error("Error al eliminar:", err));
   };
 
   return (
@@ -142,9 +132,9 @@ function Destinos() {
             </div>
             {zonas.length > 0 && (
               <ul style={{ marginTop: "10px", paddingLeft: "20px" }}>
-                {zonas.map((zona, index) => (
+                {zonas.map((z, index) => (
                   <li key={index} style={{ marginBottom: "5px", fontSize: "0.95rem" }}>
-                    📍 {zona} <button type="button" onClick={() => handleEliminarZona(index)} style={{ color: "var(--danger)", border: "none", background: "none", cursor: "pointer", marginLeft: "5px", fontWeight: "600" }}>(Quitar)</button>
+                    📍 {z.nombre} <button type="button" onClick={() => handleEliminarZona(index)} style={{ color: "var(--danger)", border: "none", background: "none", cursor: "pointer", marginLeft: "5px", fontWeight: "600" }}>(Quitar)</button>
                   </li>
                 ))}
               </ul>

@@ -9,9 +9,11 @@ exports.obtenerLugares = async (req, res) => {
     if (req.query.destino) query.destino = req.query.destino;
     if (req.query.zona) query.zona = req.query.zona;
 
+    // Se agrega el populate de usuario trayendo solo nombre y correo por seguridad
     const lugares = await Lugar.find(query)
       .populate('destino')
-      .populate('zona');
+      .populate('zona')
+      .populate('usuario', 'nombre correo'); // 👈 NUEVO: Relación de auditoría expuesta
 
     res.status(200).json({ ok: true, datos: lugares });
   } catch (error) {
@@ -19,13 +21,14 @@ exports.obtenerLugares = async (req, res) => {
   }
 };
 
-// POST: Crear un nuevo lugar relacionándolo con un Destino y una Zona
+// POST: Crear un nuevo lugar relacionándolo con un Destino, una Zona y un Usuario
 exports.crearLugar = async (req, res) => {
   try {
-    const { nombre, descripcion, destino, zona, horario } = req.body;
+    // 👈 NUEVO: Se desestructura "usuario" de la petición enviada por el Frontend
+    const { nombre, descripcion, destino, zona, horario, usuario } = req.body;
 
-    if (!nombre || !destino || !zona) {
-      return res.status(400).json({ ok: false, mensaje: 'Nombre, Destino y Zona son campos obligatorios' });
+    if (!nombre || !destino || !zona || !usuario) {
+      return res.status(400).json({ ok: false, mensaje: 'Nombre, Destino, Zona y Usuario son campos obligatorios' });
     }
 
     const nuevoLugar = new Lugar({
@@ -33,6 +36,7 @@ exports.crearLugar = async (req, res) => {
          descripcion,
          destino, // ID de la entidad Destino
          zona,    // ID de la entidad Zona
+         usuario, // 👈 NUEVO: ID del creador vinculada al documento
          horario,
          imagen: req.file ? req.file.filename : null
     });
@@ -54,6 +58,7 @@ exports.actualizarLugar = async (req, res) => {
       camposAActualizar.imagen = req.file.filename;
     }
  
+    // Nota: findByIdAndUpdate mapeará y actualizará automáticamente el campo "usuario" si se envía desde el form de edición
     const lugarActualizado = await Lugar.findByIdAndUpdate(id, camposAActualizar, { new: true });
 
     if (!lugarActualizado) {
@@ -66,7 +71,7 @@ exports.actualizarLugar = async (req, res) => {
   }
 };
 
-// El método eliminarLugar se mantiene exactamente igual al que ya posees.
+// DELETE: Eliminar un lugar de servicios
 exports.eliminarLugar = async (req, res) => {
   try {
     const { id } = req.params;

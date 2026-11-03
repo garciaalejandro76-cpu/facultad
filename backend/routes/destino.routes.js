@@ -1,17 +1,17 @@
 const express = require('express');
 const router = express.Router();
-
 const destinoController = require('../controllers/destino.controller');
-// Reutilizamos tu configuración de Multer para interceptar el FormData
-const upload = require("../config/multer");
 
-// Definición de endpoints mapeados
-router.get('/', destinoController.obtenerDestinos);
+// GET: Obtener el listado de destinos
+router.get('/', destinoController.obtenerDestinos); 
 
-// upload.none() le dice a Multer que procese el FormData que no contiene imágenes/archivos
-router.post("/", upload.none(), destinoController.crearDestino);
-router.put('/:id', upload.none(), destinoController.actualizarDestino); 
+// POST: Registrar un nuevo destino con sus respectivas zonas
+router.post('/', destinoController.crearDestino);
 
+// PUT: Modificar los metadatos de un destino y sus zonas asociadas
+router.put('/:id', destinoController.actualizarDestino);
+
+// DELETE: Remover de forma permanente un destino y sus subdocumentos en cascada
 router.delete('/:id', destinoController.eliminarDestino);
 
 module.exports = router;

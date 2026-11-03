@@ -526,3 +526,53 @@ body {
   background-color: rgba(229, 62, 62, 0.05);
   color: var(--danger-hover);
 }
+
+/* ==========================================================================
+   ALERTAS INTEGRADAS (Para formularios y Login)
+   ========================================================================== */
+.alerta-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #fff5f5; /* Fondo rojo muy suave */
+  border-left: 4px solid var(--danger); /* El color rojo definido en tus variables */
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(229, 62, 62, 0.05);
+  animation: fadeIn 0.3s ease;
+}
+
+.alerta-error p {
+  font-size: 0.9rem;
+  color: #c53030; /* Texto rojo oscuro legible */
+  margin: 0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.alerta-exito {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #f0fff4; /* Fondo verde muy suave */
+  border-left: 4px solid #38a169; /* Verde de éxito */
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(56, 161, 105, 0.05);
+  animation: fadeIn 0.3s ease;
+}
+
+.alerta-exito p {
+  font-size: 0.9rem;
+  color: #22543d; /* Texto verde oscuro legible */
+  margin: 0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}

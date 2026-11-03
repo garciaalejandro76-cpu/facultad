@@ -1,40 +1,41 @@
 const mongoose = require('mongoose');
 
 const lugarSchema = new mongoose.Schema({
-    nombre: {
-        type: String,
-        required: [true, 'El nombre es obligatorio'],
-        trim: true
-    },
-    descripcion: {
-        type: String,
-        required: [true, 'La descripción es obligatoria'],
-        trim: true
-    },
-    // Relación con el Destino elegido
-    destino: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Destino',
-        required: [true, 'El destino es obligatorio']
-    },
-    // Relación con la Zona perteneciente a ese destino
-    zona: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Zona',
-        required: [true, 'La zona es obligatoria']
-    },
-    horario: {
-        type: String,
-        required: [true, 'El horario es obligatorio'],
-        trim: true
-    },
-    imagen: {
-        type: String,
-        required: [true, 'La imagen es obligatoria'],
-        trim: true
-    }
+  nombre: {
+    type: String,
+    required: [true, 'El nombre es obligatorio'],
+    trim: true
+  },
+  descripcion: {
+    type: String,
+    trim: true
+  },
+  destino: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Destino',
+    required: [true, 'El destino es obligatorio']
+  },
+  zona: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Zona',
+    required: [true, 'La zona es obligatoria']
+  },
+  horario: {
+    type: String,
+    trim: true
+  },
+  imagen: {
+    type: String,
+    trim: true
+  },
+  // 👈 AGREGA ESTE BLOQUE AQUÍ:
+  usuario: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',
+    required: [true, 'El usuario creador es obligatorio']
+  }
 }, {
-    timestamps: true
+  timestamps: true
 });
 
 module.exports = mongoose.model('Lugar', lugarSchema, 'lugares');

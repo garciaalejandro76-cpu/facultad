@@ -47,7 +47,8 @@ exports.crearUsuario = async (req, res) => {
       nombre,
       email,
       password,
-      rol: rol || 'cliente'
+      // 🔽 CAMBIO AQUÍ: Cambiamos  por 'usuario' por defecto
+      rol: rol || 'usuario' 
     });
 
     const usuarioGuardado = await nuevoUsuario.save();
@@ -124,17 +125,19 @@ exports.loginUsuario = async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: 'Email y contraseña son obligatorios' });
     }
 
-    // Buscar si el usuario existe y si está activo
-    const usuario = await Usuario.findOne({ email });
-    if (!usuario || !usuario.activo) {
-      return res.status(400).json({ ok: false, mensaje: 'Credenciales inválidas o cuenta inactiva' });
-    }
+   // Buscar si el usuario existe y si está activo
+const usuario = await Usuario.findOne({ email });
+if (!usuario || !usuario.activo) {  
+  // Modificado para usar el texto exacto que necesitas
+  return res.status(400).json({ ok: false, mensaje: 'Email o clave inválidos' });
+}
 
-    // Validar contraseña usando el método del esquema
-    const esPasswordValido = await usuario.compararPassword(password);
-    if (!esPasswordValido) {
-      return res.status(400).json({ ok: false, mensaje: 'Credenciales inválidas' });
-    }
+// Validar contraseña usando el método del esquema
+const esPasswordValido = await usuario.compararPassword(password);
+if (!esPasswordValido) {
+  // Modificado para usar el texto exacto que necesitas
+  return res.status(400).json({ ok: false, mensaje: 'Email o clave inválidos' });
+}
 
     // Generar Token JWT 
     const token = jwt.sign(

@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 function Lugares({ destinoActivoId }) {
+  const { usuario } = useAuth();
+  
   const [lugares, setLugares] = useState([]);  
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -9,11 +12,11 @@ function Lugares({ destinoActivoId }) {
   const [editandoId, setEditandoId] = useState(null);
 
   // Estados para el manejo de relaciones jerárquicas dinámicas con el Backend
-  const [destinosLista, setDestinosLista] = useState([]); // Listado total de destinos
-  const [zonasFiltradasForm, setZonasFiltradasForm] = useState([]); // Zonas del destino seleccionado en el Form
-  const [destinoForm, setDestinoForm] = useState(""); // Destino activo en el formulario
-  const [zonaForm, setZonaForm] = useState("");       // Zona activa en el formulario
-  const [filtroZonaListado, setFiltroZonaListado] = useState(""); // Criterio de filtro para el listado
+  const [destinosLista, setDestinosLista] = useState([]); 
+  const [zonasFiltradasForm, setZonasFiltradasForm] = useState([]); 
+  const [destinoForm, setDestinoForm] = useState(""); 
+  const [zonaForm, setZonaForm] = useState("");       
+  const [filtroZonaListado, setFiltroZonaListado] = useState(""); 
 
   // 1. Obtener la colección de destinos al inicializar el componente para popular los selectores
   useEffect(() => {
@@ -29,7 +32,7 @@ function Lugares({ destinoActivoId }) {
   useEffect(() => {
     if (destinoForm) {
       const destinoEncontrado = destinosLista.find(d => d._id === destinoForm);
-      setZonasFiltradasForm(destinoEncontrado ? destinoEncontrado.zonas : []);
+      setZonasFiltradasForm(destinoEncontrado && Array.isArray(destinoEncontrado.zonas) ? destinoEncontrado.zonas : []);
     } else {
       setZonasFiltradasForm([]);
     }
@@ -54,7 +57,7 @@ function Lugares({ destinoActivoId }) {
 
   // Sincronizar listado cuando el usuario cambia el destino principal en la cabecera global
   useEffect(() => {
-    setFiltroZonaListado(""); // Limpiar filtros de zona previos al alternar de región
+    setFiltroZonaListado(""); 
     cargarLugaresEnBaseAFiltros();
   }, [destinoActivoId]);
 
@@ -68,10 +71,11 @@ function Lugares({ destinoActivoId }) {
     const formData = new FormData();
     formData.append("nombre", nombre);
     formData.append("descripcion", descripcion);
-    formData.append("destino", destinoForm); // Cambiado de ubicacion a destino ID
-    formData.append("zona", zonaForm);       // Agregado zona ID obligatorio
+    formData.append("destino", destinoForm); 
+    formData.append("zona", zonaForm);       
     formData.append("horario", horario);
-    
+    formData.append("usuario", usuario?._id || "ID_DE_PRUEBA");
+
     if (imagen && typeof imagen !== "string") {
       formData.append("imagen", imagen);
     }
@@ -122,6 +126,7 @@ function Lugares({ destinoActivoId }) {
     setHorario(lugar.horario);
     setImagen(lugar.imagen);
     setDestinoForm(lugar.destino?._id || "");
+    setZonasFiltradasForm(lugar.destino && Array.isArray(lugar.destino.zonas) ? lugar.destino.zonas : []);
     setZonaForm(lugar.zona?._id || "");
   };
 
@@ -140,8 +145,9 @@ function Lugares({ destinoActivoId }) {
     return actual && Array.isArray(actual.zonas) ? actual.zonas : [];
   };
 
-  return (
+return (
     <div className="seccion-lugares">
+      {/* PANEL IZQUIERDO: FORMULARIO */}
       <section className="panel-formulario" aria-labelledby="titulo-formulario">
         <h2 id="titulo-formulario">{editandoId ? "Modificar Lugar" : "Cargar Nuevo Lugar"}</h2>
         
@@ -169,7 +175,6 @@ function Lugares({ destinoActivoId }) {
             />
           </div>    
 
-          {/* NUEVO CAMPO: SELECCIÓN DE DESTINO EN FORMULARIO */}
           <div className="form-group">
             <label htmlFor="destinoForm">Destino Relacionado</label>
             <select 
@@ -185,7 +190,6 @@ function Lugares({ destinoActivoId }) {
             </select>
           </div>
 
-          {/* NUEVO CAMPO: SELECCIÓN DE ZONA EN FORMULARIO (DINÁMICA) */}
           <div className="form-group">
             <label htmlFor="zonaForm">Zona Específica</label>
             <select 
@@ -237,8 +241,8 @@ function Lugares({ destinoActivoId }) {
         </form>
       </section>
 
+      {/* PANEL DERECHO: LISTADO */}
       <section className="panel-listado" aria-labelledby="titulo-listado">
-        {/* FILTRO DINÁMICO TOTALMENTE SINCRONIZADO AL DESTINO DEL HEADER */}
         <div className="filtro-contenedor">
           <label htmlFor="filtro-zona" className="filtro-label">Filtrar por zona:</label>
           <select 
@@ -271,24 +275,32 @@ function Lugares({ destinoActivoId }) {
                 </div>
 
                 <div className="tarjeta-info">
-{lugar.nombre}
-{lugar.descripcion}
-🗺️
-{/* Corregido el renderizado de la relación poblada del Backend */}
+                  <h3 className="tarjeta-titulo-lugar">{lugar.nombre}</h3>
+                  <p className="descripcion">{lugar.descripcion}</p>
+                  
+                  <div className="tarjeta-metadatos">
+                    <div className="detalles">
+                      <span className="badge-icon">🗺️</span>
+                      <span className="badge-texto">
+                        {lugar.destino?.nombre || "Destino"} — {lugar.zona?.nombre || "Zona"}
+                      </span>
+                    </div>
+                    <div className="detalles">
+                      <span className="badge-icon">🕒</span>
+                      <span className="badge-texto">{lugar.horario}</span>
+                    </div>
+                  </div>
+                </div>
 
-{lugar.destino?.nombre} — {lugar.zona?.nombre}
-
-
-
-🕒
-{lugar.horario}
-
-
-<button type="button" onClick={() => handleEditarClick(lugar)} className="btn btn-editar">Editar datos</button>
-
-<button type="button" onClick={() => handleDelete(lugar._id)} className="btn btn-eliminar">Eliminar</button>
-</div>
-</article>
+                <div className="tarjeta-acciones">
+                  <button type="button" onClick={() => handleEditarClick(lugar)} className="btn btn-editar">
+                    Editar datos
+                  </button>
+                  <button type="button" onClick={() => handleDelete(lugar._id)} className="btn btn-eliminar">
+                    Eliminar
+                  </button>
+                </div>
+              </article>
             ))}
           </div>
         )}
@@ -296,5 +308,5 @@ function Lugares({ destinoActivoId }) {
     </div>
   );
 }
-export default Lugares;
 
+export default Lugares;
