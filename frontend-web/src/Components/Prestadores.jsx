@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { MensajesSistema } from "../context/MensajesSistema";
 
 function Prestadores({ destinoActivoId }) {
   const { usuario } = useAuth();
-  
-  // 🔽 NUEVO: Validar si el usuario actual posee el rol de administrador
   const esAdmin = usuario?.rol === 'admin';
 
   const [prestadores, setPrestadores] = useState([]);
@@ -13,6 +12,10 @@ function Prestadores({ destinoActivoId }) {
   const [categoria, setCategoria] = useState("");
   const [imagen, setImagen] = useState(null);
   const [editandoId, setEditandoId] = useState(null);
+
+  // Estados de feedback visual dinámico
+  const [feedbackError, setFeedbackError] = useState("");
+  const [feedbackExito, setFeedbackExito] = useState("");
 
   const [destinosLista, setDestinosLista] = useState([]);
   const [zonasFiltradasForm, setZonasFiltradasForm] = useState([]);
@@ -23,10 +26,8 @@ function Prestadores({ destinoActivoId }) {
   useEffect(() => {
     fetch(import.meta.env.VITE_BACKEND_URL + "/api/destinos")
       .then((res) => res.json())
-      .then((data) => {
-        if (data.ok) setDestinosLista(data.datos);
-      })
-      .catch((err) => console.error("Error al cargar destinos secundarios:", err));
+      .then((data) => { if (data.ok) setDestinosLista(data.datos); })
+      .catch((err) => console.error("Error al cargar destinos:", err));
   }, []);
 
   useEffect(() => {
@@ -41,14 +42,11 @@ function Prestadores({ destinoActivoId }) {
   const cargarPrestadoresFiltrados = () => {
     if (!destinoActivoId) return;
     let url = `${import.meta.env.VITE_BACKEND_URL}/api/prestadores?destino=${destinoActivoId}`;
-    if (filtroZonaListado && filtroZonaListado !== "") {
-      url += `&zona=${filtroZonaListado}`;
-    }
+    if (filtroZonaListado && filtroZonaListado !== "") url += `&zona=${filtroZonaListado}`;
+
     fetch(url)
       .then((res) => res.json())
-      .then((data) => {
-        if (data.ok) setPrestadores(data.datos);
-      })
+      .then((data) => { if (data.ok) setPrestadores(data.datos); })
       .catch((err) => console.error("Error al mapear prestadores:", err));
   };
 
@@ -63,7 +61,9 @@ function Prestadores({ destinoActivoId }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!esAdmin) return; // Protección en cliente
+    if (!esAdmin) return;
+    setFeedbackError("");
+    setFeedbackExito("");
 
     const formData = new FormData();
     formData.append("titulo", titulo);
@@ -84,36 +84,55 @@ function Prestadores({ destinoActivoId }) {
       .then((res) => res.json())
       .then((data) => {
         if (data.ok) {
+          setFeedbackExito(editandoId ? MensajesSistema.crud.editarExito : MensajesSistema.crud.crearExito);
           cancelarEdicion();
           cargarPrestadoresFiltrados();
+          setTimeout(() => setFeedbackExito(""), 4000);
         } else {
-          alert("Error: " + data.mensaje);
+          setFeedbackError(data.mensaje || MensajesSistema.crud.errorOperacion);
         }
       })
-      .catch((err) => console.error("Error en submit:", err));
+      .catch(() => setFeedbackError(MensajesSistema.crud.errorRed));
   };
 
   const handleDelete = (id) => {
-    if (!esAdmin) return; // Protección en cliente
+    if (!esAdmin) return;
     if (!window.confirm("¿Remover prestador de servicios?")) return;
+    setFeedbackError("");
+    setFeedbackExito("");
+
     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/prestadores/${id}`, { method: "DELETE" })
       .then((res) => res.json())
       .then((data) => {
         if (data.ok) {
+          setFeedbackExito(MensajesSistema.crud.eliminarExito);
           if (editandoId === id) cancelarEdicion();
           cargarPrestadoresFiltrados();
+          setTimeout(() => setFeedbackExito(""), 4000);
+        } else {
+          setFeedbackError(data.mensaje || MensajesSistema.crud.errorOperacion);
         }
-      });
+      })
+      .catch(() => setFeedbackError(MensajesSistema.crud.errorRed));
   };
 
   const handleEditarClick = (p) => {
     if (!esAdmin) return;
     setEditandoId(p._id);
     setTitulo(p.titulo);
+    setFeedbackError("");
     setDescripcion(p.descripcion);
     setCategoria(p.categoria);
-    const destinoIdPadre = p.zona?.destino?._id || p.zona?.destino || "";
-    setDestinoForm(destinoIdPadre);
+    
+    const idDestino = p.zona?.destino?._id || p.zona?.destino || "";
+    setDestinoForm(idDestino);
+
+    const destinoEncontrado = destinosLista.find(d => d._id === idDestino);
+    if (destinoEncontrado && Array.isArray(destinoEncontrado.zonas)) {
+      setZonasFiltradasForm(destinoEncontrado.zonas); 
+    } else {
+      setZonasFiltradasForm([]);
+    }
     setZonaForm(p.zona?._id || "");
     setImagen(p.imagen);
   };
@@ -126,6 +145,8 @@ function Prestadores({ destinoActivoId }) {
     setDestinoForm("");
     setZonaForm("");
     setImagen(null);
+    const fileInput = document.getElementById("imagen");
+    if (fileInput) fileInput.value = "";
   };
 
   const obtenerZonasDelDestinoActivo = () => {
@@ -133,14 +154,15 @@ function Prestadores({ destinoActivoId }) {
     return actual && Array.isArray(actual.zonas) ? actual.zonas : [];
   };
   return (
-    <div 
-      className="seccion-lugares" 
-      style={!esAdmin ? { gridTemplateColumns: '1fr' } : {}}
-    >
-      {/* SECCIÓN IZQUIERDA: FORMULARIO (Solo Administradores) */}
+    <div className="seccion-lugares" style={!esAdmin ? { gridTemplateColumns: '1fr' } : {}}>
+      {/* SECCIÓN IZQUIERDA: FORMULARIO */}
       {esAdmin && (
         <section className="panel-formulario">
           <h2>{editandoId ? "Modificar Prestador" : "Registrar Nuevo Prestador"}</h2>
+          
+          {feedbackError && <div className="alerta-error"><span className="badge-icon">⚠️</span><p>{feedbackError}</p></div>}
+          {feedbackExito && <div className="alerta-exito"><span className="badge-icon">✅</span><p>{feedbackExito}</p></div>}
+
           <form onSubmit={handleSubmit} className="formulario-carga">
             <div className="form-group">
               <label htmlFor="titulo">Nombre / Título Comercial</label>
@@ -157,6 +179,7 @@ function Prestadores({ destinoActivoId }) {
                 <option value="Gastronomia">Gastronomía</option>
                 <option value="Alojamiento">Alojamiento y Hospedaje</option>
                 <option value="Guiado">Excursiones y Guiados</option>
+                <option value="Supermercado">Supermercado</option>
               </select>
             </div>
             <div className="form-group">
@@ -175,7 +198,13 @@ function Prestadores({ destinoActivoId }) {
             </div>
             <div className="form-group">
               <label htmlFor="imagen">Imagen Comercial</label>
-              <input id="imagen" type="file" accept="image/*" onChange={(e) => setImagen(e.target.files[0])} />
+              <input 
+                id="imagen" 
+                type="file" 
+                accept="image/*" 
+                /* ⚙️ CORREGIDO: Extrae el archivo individual de la lista en lugar del objeto iterable completo */
+                onChange={(e) => setImagen(e.target.files[0])} 
+              />
             </div>
             <div className="form-acciones">
               <button type="submit" className="btn btn-primario">{editandoId ? "Actualizar" : "Guardar"}</button>
@@ -187,6 +216,9 @@ function Prestadores({ destinoActivoId }) {
 
       {/* SECCIÓN DERECHA: LISTADO */}
       <section className="panel-listado" aria-labelledby="titulo-listado">
+        {!esAdmin && feedbackExito && <div className="alerta-exito"><span className="badge-icon">✅</span><p>{feedbackExito}</p></div>}
+        {!esAdmin && feedbackError && <div className="alerta-error"><span className="badge-icon">⚠️</span><p>{feedbackError}</p></div>}
+
         <div className="filtro-contenedor" style={{ marginBottom: "15px" }}>
           <label htmlFor="filtro-zona" className="filtro-label">Filtrar por zona:</label>
           <select id="filtro-zona" value={filtroZonaListado} onChange={(e) => setFiltroZonaListado(e.target.value)} className="form-select-filtro">
@@ -216,7 +248,6 @@ function Prestadores({ destinoActivoId }) {
                   </div>
                 </div>
 
-                {/* 🔽 NUEVO: Renderizado condicional de acciones de administración */}
                 {esAdmin && (
                   <div className="tarjeta-acciones">
                     <button type="button" onClick={() => handleEditarClick(p)} className="btn btn-editar">Editar datos</button>

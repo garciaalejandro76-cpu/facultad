@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { MensajesSistema } from "../context/MensajesSistema";
 
 function Eventos({ destinoActivoId }) {
   const { usuario } = useAuth();
-  
-  // 🔽 NUEVO: Validar si el usuario actual posee el rol de administrador
   const esAdmin = usuario?.rol === 'admin';
 
   const [eventos, setEventos] = useState([]);
@@ -14,6 +13,10 @@ function Eventos({ destinoActivoId }) {
   const [fechaFin, setFechaFin] = useState("");
   const [imagen, setImagen] = useState(null);
   const [editandoId, setEditandoId] = useState(null);
+
+  // Estados de feedback visual dinámico
+  const [feedbackError, setFeedbackError] = useState("");
+  const [feedbackExito, setFeedbackExito] = useState("");
 
   const [destinosLista, setDestinosLista] = useState([]);
   const [zonasFiltradasForm, setZonasFiltradasForm] = useState([]);
@@ -25,10 +28,8 @@ function Eventos({ destinoActivoId }) {
   useEffect(() => {
     fetch(import.meta.env.VITE_BACKEND_URL + "/api/destinos")
       .then((res) => res.json())
-      .then((data) => {
-        if (data.ok) setDestinosLista(data.datos);
-      })
-      .catch((err) => console.error("Error al cargar destinos secundarios:", err));
+      .then((data) => { if (data.ok) setDestinosLista(data.datos); })
+      .catch((err) => console.error("Error al cargar destinos:", err));
   }, []);
 
   useEffect(() => {
@@ -43,14 +44,11 @@ function Eventos({ destinoActivoId }) {
   const cargarEventosFiltrados = () => {
     if (!destinoActivoId) return;
     let url = `${import.meta.env.VITE_BACKEND_URL}/api/eventos?destino=${destinoActivoId}&tiempo=${filtroTiempo}`;
-    if (filtroZonaListado && filtroZonaListado !== "") {
-      url += `&zona=${filtroZonaListado}`;
-    }
+    if (filtroZonaListado && filtroZonaListado !== "") url += `&zona=${filtroZonaListado}`;
+
     fetch(url)
       .then((res) => res.json())
-      .then((data) => {
-        if (data.ok && data.datos) setEventos(data.datos);
-      })
+      .then((data) => { if (data.ok && data.datos) setEventos(data.datos); })
       .catch((err) => console.error("Error al mapear eventos:", err));
   };
 
@@ -65,10 +63,12 @@ function Eventos({ destinoActivoId }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!esAdmin) return; // Protección en cliente
+    if (!esAdmin) return;
+    setFeedbackError("");
+    setFeedbackExito("");
 
     if (new Date(fechaInicio) >= new Date(fechaFin)) {
-      alert("Error: La fecha y hora de inicio debe ser anterior a la fecha y hora de finalización.");
+      setFeedbackError("La fecha de inicio debe ser anterior a la de finalización.");
       return;
     }
 
@@ -92,26 +92,36 @@ function Eventos({ destinoActivoId }) {
       .then((res) => res.json())
       .then((data) => {
         if (data.ok) {
+          setFeedbackExito(editandoId ? MensajesSistema.crud.editarExito : MensajesSistema.crud.crearExito);
           cancelarEdicion();
           cargarEventosFiltrados();
+          setTimeout(() => setFeedbackExito(""), 4000);
         } else {
-          alert("Error: " + data.mensaje);
+          setFeedbackError(data.mensaje || MensajesSistema.crud.errorOperacion);
         }
       })
-      .catch((err) => console.error("Error en submit:", err));
+      .catch(() => setFeedbackError(MensajesSistema.crud.errorRed));
   };
 
   const handleDelete = (id) => {
-    if (!esAdmin) return; // Protección en cliente
+    if (!esAdmin) return;
     if (!window.confirm("¿Deseas remover de manera permanente este evento?")) return;
+    setFeedbackError("");
+    setFeedbackExito("");
+
     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/eventos/${id}`, { method: "DELETE" })
       .then((res) => res.json())
       .then((data) => {
         if (data.ok) {
+          setFeedbackExito(MensajesSistema.crud.eliminarExito);
           if (editandoId === id) cancelarEdicion();
           cargarEventosFiltrados();
+          setTimeout(() => setFeedbackExito(""), 4000);
+        } else {
+          setFeedbackError(data.mensaje || MensajesSistema.crud.errorOperacion);
         }
-      });
+      })
+      .catch(() => setFeedbackError(MensajesSistema.crud.errorRed));
   };
 
   const formatearParaInput = (stringFecha) => {
@@ -125,12 +135,21 @@ function Eventos({ destinoActivoId }) {
     if (!esAdmin) return;
     setEditandoId(ev._id);
     setTitulo(ev.titulo);
+    setFeedbackError(""); // Corregido: Limpia errores al iniciar edición
     setDescripcion(ev.descripcion);
     setFechaInicio(formatearParaInput(ev.fecha_hora_inicio));
     setFechaFin(formatearParaInput(ev.fecha_hora_fin));
     setImagen(ev.imagen); 
-    const destinoIdPadre = ev.zona?.destino?._id || ev.zona?.destino || "";
-    setDestinoForm(destinoIdPadre);
+    
+    const idDestino = ev.zona?.destino?._id || ev.zona?.destino || "";
+    setDestinoForm(idDestino);
+
+    const destinoEncontrado = destinosLista.find(d => d._id === idDestino);
+    if (destinoEncontrado && Array.isArray(destinoEncontrado.zonas)) {
+      setZonasFiltradasForm(destinoEncontrado.zonas); 
+    } else {
+      setZonasFiltradasForm([]);
+    }
     setZonaForm(ev.zona?._id || "");
   };
 
@@ -143,6 +162,8 @@ function Eventos({ destinoActivoId }) {
     setDestinoForm("");
     setZonaForm("");
     setImagen(null);
+    const fileInput = document.getElementById("imagen");
+    if (fileInput) fileInput.value = "";
   };
 
   const obtenerZonasDelDestinoActivo = () => {
@@ -150,14 +171,15 @@ function Eventos({ destinoActivoId }) {
     return actual && Array.isArray(actual.zonas) ? actual.zonas : [];
   };
   return (
-    <div 
-      className="seccion-lugares" 
-      style={!esAdmin ? { gridTemplateColumns: '1fr' } : {}}
-    >
-      {/* COLUMNA IZQUIERDA: FORMULARIO (Solo Administradores) */}
+    <div className="seccion-lugares" style={!esAdmin ? { gridTemplateColumns: '1fr' } : {}}>
+      {/* COLUMNA IZQUIERDA: FORMULARIO */}
       {esAdmin && (
         <section className="panel-formulario" aria-labelledby="titulo-formulario">
           <h2 id="titulo-formulario">{editandoId ? "Modificar Evento" : "Planificar Nuevo Evento"}</h2>
+          
+          {feedbackError && <div className="alerta-error"><span className="badge-icon">⚠️</span><p>{feedbackError}</p></div>}
+          {feedbackExito && <div className="alerta-exito"><span className="badge-icon">✅</span><p>{feedbackExito}</p></div>}
+
           <form onSubmit={handleSubmit} className="formulario-carga">
             <div className="form-group">
               <label htmlFor="titulo">Título del Evento</label>
@@ -191,7 +213,13 @@ function Eventos({ destinoActivoId }) {
             </div>
             <div className="form-group">
               <label htmlFor="imagen">Imagen Informativa</label>
-              <input id="imagen" type="file" accept="image/*" onChange={(e) => setImagen(e.target.files)} />
+              <input 
+                id="imagen" 
+                type="file" 
+                accept="image/*" 
+                /* ⚙️ CORREGIDO: Extrae el archivo individual de la lista */
+                onChange={(e) => setImagen(e.target.files[0])} 
+              />
             </div>
             <div className="form-acciones">
               <button type="submit" className="btn btn-primario">{editandoId ? "Actualizar" : "Guardar"}</button>
@@ -203,6 +231,9 @@ function Eventos({ destinoActivoId }) {
 
       {/* COLUMNA DERECHA: LISTADO */}
       <section className="panel-listado" aria-labelledby="titulo-listado">
+        {!esAdmin && feedbackExito && <div className="alerta-exito"><span className="badge-icon">✅</span><p>{feedbackExito}</p></div>}
+        {!esAdmin && feedbackError && <div className="alerta-error"><span className="badge-icon">⚠️</span><p>{feedbackError}</p></div>}
+
         <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginBottom: "15px" }}>
           <div className="filtro-contenedor" style={{ flex: 1, marginBottom: 0 }}>
             <label htmlFor="filtro-zona" className="filtro-label">Zona:</label>
@@ -249,7 +280,6 @@ function Eventos({ destinoActivoId }) {
                     </div>
                   </div>
 
-                  {/* 🔽 NUEVO: Renderizado condicional de acciones de administración */}
                   {esAdmin && (
                     <div className="tarjeta-acciones">
                       <button type="button" onClick={() => handleEditarClick(ev)} className="btn btn-editar">Editar datos</button>

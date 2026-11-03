@@ -34,7 +34,7 @@ exports.crearLugar = async (req, res) => {
 
     // 🔽 NUEVO: Control de rol en el servidor
     const datosUsuario = await Usuario.findById(usuario);
-    if (!datosUsuario || datosUsuario.role !== 'admin') { // o datosUsuario.rol según tu BD
+    if (!datosUsuario || datosUsuario.rol !== 'admin') { // o datosUsuario.rol según tu BD
       return res.status(403).json({ ok: false, mensaje: 'Acceso denegado: Se requieren permisos de administrador' });
     }
 
