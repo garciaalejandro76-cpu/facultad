@@ -1,4 +1,6 @@
 const Prestador = require('../models/Prestador');
+const Usuario = require('../models/Usuario'); // 👈 NUEVO: Requerir modelo de usuario
+
 
 // GET: Obtener prestadores (Soporta filtros opcionales de zona o destino de forma anidada)
 exports.obtenerPrestadores = async (req, res) => {
@@ -29,7 +31,7 @@ exports.obtenerPrestadores = async (req, res) => {
   }
 };
 
-// POST: Crear un nuevo prestador relacionado con un Usuario, una Zona y su Ubicación
+// POST: Crear un nuevo prestador
 exports.crearPrestador = async (req, res) => {
   try {
     const { titulo, descripcion, categoria, zona, usuario } = req.body;
@@ -38,12 +40,14 @@ exports.crearPrestador = async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: 'Título, Zona, Usuario son obligatorios' });
     }
 
+    // 🔽 NUEVO: Validación de rol administrativa en la API
+    const datosUsuario = await Usuario.findById(usuario);
+    if (!datosUsuario || datosUsuario.rol !== 'admin') {
+      return res.status(403).json({ ok: false, mensaje: 'Acceso denegado: Se requieren permisos de administrador' });
+    }
+
     const nuevoPrestador = new Prestador({
-      titulo,
-      descripcion,
-      categoria,
-      zona,
-      usuario,     
+      titulo, descripcion, categoria, zona, usuario,     
       imagen: req.file ? req.file.filename : null
     });
 
@@ -58,25 +62,21 @@ exports.crearPrestador = async (req, res) => {
 exports.actualizarPrestador = async (req, res) => {
   try {
     const { id } = req.params;
-    const { titulo, descripcion, categoria, zona} = req.body;
+    const { titulo, descripcion, categoria, zona, usuarioActual } = req.body;
 
-    const camposAActualizar = {
-      titulo,
-      descripcion,
-      categoria,
-      zona
-      
-    };
-
-    if (req.file) {
-      camposAActualizar.imagen = req.file.filename;
+    // 🔽 NUEVO: Validación de rol de edición en la API
+    if (usuarioActual) {
+      const datosUsuario = await Usuario.findById(usuarioActual);
+      if (!datosUsuario || datosUsuario.rol !== 'admin') {
+        return res.status(403).json({ ok: false, mensaje: 'No tienes permisos para modificar prestadores' });
+      }
     }
+
+    const camposAActualizar = { titulo, descripcion, categoria, zona };
+    if (req.file) camposAActualizar.imagen = req.file.filename;
 
     const prestadorActualizado = await Prestador.findByIdAndUpdate(id, camposAActualizar, { new: true });
-
-    if (!prestadorActualizado) {
-      return res.status(404).json({ ok: false, mensaje: 'Prestador no encontrado' });
-    }
+    if (!prestadorActualizado) return res.status(404).json({ ok: false, mensaje: 'Prestador no encontrado' });
 
     res.status(200).json({ ok: true, mensaje: 'Prestador actualizado correctamente', datos: prestadorActualizado });
   } catch (error) {

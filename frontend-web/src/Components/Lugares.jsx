@@ -4,6 +4,9 @@ import { useAuth } from "../context/AuthContext";
 function Lugares({ destinoActivoId }) {
   const { usuario } = useAuth();
   
+  // Validar si el usuario actual posee el rol de administrador
+  const esAdmin = usuario?.rol === 'admin';
+
   const [lugares, setLugares] = useState([]);  
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -68,6 +71,8 @@ function Lugares({ destinoActivoId }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!esAdmin) return; 
+
     const formData = new FormData();
     formData.append("nombre", nombre);
     formData.append("descripcion", descripcion);
@@ -101,6 +106,7 @@ function Lugares({ destinoActivoId }) {
   };
 
   const handleDelete = (id) => {
+    if (!esAdmin) return;
     const confirmar = window.confirm("¿Seguro que deseas eliminar este lugar?");
     if (!confirmar) return;
 
@@ -119,15 +125,27 @@ function Lugares({ destinoActivoId }) {
       .catch((err) => console.error("Error al eliminar:", err));
   };
 
+  // 🛠️ FUNCIÓN CORREGIDA: Fuerza la carga inmediata de las zonas correctas en cascada
   const handleEditarClick = (lugar) => {
+    if (!esAdmin) return;
     setEditandoId(lugar._id);
     setNombre(lugar.nombre);
     setDescripcion(lugar.descripcion);
     setHorario(lugar.horario);
     setImagen(lugar.imagen);
-    setDestinoForm(lugar.destino?._id || "");
-    setZonasFiltradasForm(lugar.destino && Array.isArray(lugar.destino.zonas) ? lugar.destino.zonas : []);
-    setZonaForm(lugar.zona?._id || "");
+    
+    const idDestino = lugar.destino?._id || "";
+    setDestinoForm(idDestino);
+
+    // Buscamos el objeto destino completo para extraer sus zonas inmediatamente
+    const destinoEncontrado = destinosLista.find(d => d._id === idDestino);
+    if (destinoEncontrado && Array.isArray(destinoEncontrado.zonas)) {
+      setZonasFiltradasForm(destinoEncontrado.zonas); // 👈 Forzar asignación inmediata de la lista de zonas
+    } else {
+      setZonasFiltradasForm([]);
+    }
+
+    setZonaForm(lugar.zona?._id || ""); // Ahora el select encontrará el ID mapeado al instante
   };
 
   const cancelarEdicion = () => {
@@ -144,102 +162,106 @@ function Lugares({ destinoActivoId }) {
     const actual = destinosLista.find(d => d._id === destinoActivoId);
     return actual && Array.isArray(actual.zonas) ? actual.zonas : [];
   };
+  return (
+    <div 
+      className="seccion-lugares" 
+      style={!esAdmin ? { gridTemplateColumns: '1fr' } : {}}
+    >
+      {/* PANEL IZQUIERDO: FORMULARIO (Solo disponible para administradores) */}
+      {esAdmin && (
+        <section className="panel-formulario" aria-labelledby="titulo-formulario">
+          <h2 id="titulo-formulario">{editandoId ? "Modificar Lugar" : "Cargar Nuevo Lugar"}</h2>
+          
+          <form onSubmit={handleSubmit} className="formulario-carga">
+            <div className="form-group">
+              <label htmlFor="nombre">Nombre del Lugar</label>
+              <input 
+                id="nombre" 
+                type="text" 
+                placeholder="Ej. Playa Bonita" 
+                value={nombre} 
+                onChange={(e) => setNombre(e.target.value)} 
+                required 
+              />
+            </div>
 
-return (
-    <div className="seccion-lugares">
-      {/* PANEL IZQUIERDO: FORMULARIO */}
-      <section className="panel-formulario" aria-labelledby="titulo-formulario">
-        <h2 id="titulo-formulario">{editandoId ? "Modificar Lugar" : "Cargar Nuevo Lugar"}</h2>
-        
-        <form onSubmit={handleSubmit} className="formulario-carga">
-          <div className="form-group">
-            <label htmlFor="nombre">Nombre del Lugar</label>
-            <input 
-              id="nombre" 
-              type="text" 
-              placeholder="Ej. Playa Bonita" 
-              value={nombre} 
-              onChange={(e) => setNombre(e.target.value)} 
-              required 
-            />
-          </div>
+            <div className="form-group">
+              <label htmlFor="descripcion">Descripción</label>
+              <textarea 
+                id="descripcion" 
+                placeholder="Añade una descripción breve..." 
+                value={descripcion} 
+                onChange={(e) => setDescripcion(e.target.value)} 
+                required 
+              />
+            </div>    
 
-          <div className="form-group">
-            <label htmlFor="descripcion">Descripción</label>
-            <textarea 
-              id="descripcion" 
-              placeholder="Añade una descripción breve..." 
-              value={descripcion} 
-              onChange={(e) => setDescripcion(e.target.value)} 
-              required 
-            />
-          </div>    
+            <div className="form-group">
+              <label htmlFor="destinoForm">Destino Relacionado</label>
+              <select 
+                id="destinoForm" 
+                value={destinoForm} 
+                onChange={(e) => { setDestinoForm(e.target.value); setZonaForm(""); }} 
+                required
+              >
+                <option value="">Seleccione un Destino</option>
+                {destinosLista.map(d => (
+                  <option key={d._id} value={d._id}>{d.nombre}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="destinoForm">Destino Relacionado</label>
-            <select 
-              id="destinoForm" 
-              value={destinoForm} 
-              onChange={(e) => { setDestinoForm(e.target.value); setZonaForm(""); }} 
-              required
-            >
-              <option value="">Seleccione un Destino</option>
-              {destinosLista.map(d => (
-                <option key={d._id} value={d._id}>{d.nombre}</option>
-              ))}
-            </select>
-          </div>
+            <div className="form-group">
+              <label htmlFor="zonaForm">Zona Específica</label>
+              <select 
+                id="zonaForm" 
+                value={zonaForm} 
+                onChange={(e) => setZonaForm(e.target.value)} 
+                required 
+                disabled={!destinoForm}
+              >
+                <option value="">Seleccione una Zona</option>
+                {zonasFiltradasForm.map(z => (
+                  <option key={z._id} value={z._id}>{z.nombre}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="zonaForm">Zona Específica</label>
-            <select 
-              id="zonaForm" 
-              value={zonaForm} 
-              onChange={(e) => setZonaForm(e.target.value)} 
-              required 
-              disabled={!destinoForm}
-            >
-              <option value="">Seleccione una Zona</option>
-              {zonasFiltradasForm.map(z => (
-                <option key={z._id} value={z._id}>{z.nombre}</option>
-              ))}
-            </select>
-          </div>
+            <div className="form-group">
+              <label htmlFor="horario">Horarios de Visita</label>
+              <input 
+                id="horario" 
+                type="text" 
+                placeholder="Ej. Lunes a Viernes 9:00 - 18:00" 
+                value={horario} 
+                onChange={(e) => setHorario(e.target.value)} 
+                required 
+              />
+            </div>
+         
+            <div className="form-group">
+              <label htmlFor="imagen">Imagen del Lugar</label>
+              <input 
+                id="imagen" 
+                type="file" 
+                accept="image/*" 
+                onChange={(e) => setImagen(e.target.files)} 
+              />
+            </div>
 
-          <div className="form-group">
-            <label htmlFor="horario">Horarios de Visita</label>
-            <input 
-              id="horario" 
-              type="text" 
-              placeholder="Ej. Lunes a Viernes 9:00 - 18:00" 
-              value={horario} 
-              onChange={(e) => setHorario(e.target.value)} 
-              required 
-            />
-          </div>
-       
-          <div className="form-group">
-            <label htmlFor="imagen">Imagen del Lugar</label>
-            <input 
-              id="imagen" 
-              type="file" 
-              accept="image/*" 
-              onChange={(e) => setImagen(e.target.files[0])} 
-            />
-          </div>
-
-          <div className="form-acciones">
-            <button type="submit" className="btn btn-primario">
-              {editandoId ? "Actualizar" : "Guardar"}
-            </button>
-            {editandoId && (
-              <button type="button" onClick={cancelarEdicion} className="btn btn-secundario">
-                Cancelar
+            <div className="form-acciones">
+              <button type="submit" className="btn btn-primario">
+                {editandoId ? "Actualizar" : "Guardar"}
               </button>
-            )}
-          </div>
-        </form>
-      </section>
+              {editandoId && (
+                <button type="button" onClick={cancelarEdicion} className="btn btn-secundario">
+                  Cancelar
+                </button>
+              )}
+            </div>
+          </form>
+        </section>
+      )}
 
       {/* PANEL DERECHO: LISTADO */}
       <section className="panel-listado" aria-labelledby="titulo-listado">
@@ -292,14 +314,17 @@ return (
                   </div>
                 </div>
 
-                <div className="tarjeta-acciones">
-                  <button type="button" onClick={() => handleEditarClick(lugar)} className="btn btn-editar">
-                    Editar datos
-                  </button>
-                  <button type="button" onClick={() => handleDelete(lugar._id)} className="btn btn-eliminar">
-                    Eliminar
-                  </button>
-                </div>
+                {/* Acciones de la Tarjeta (Solo visibles para administradores) */}
+                {esAdmin && (
+                  <div className="tarjeta-acciones">
+                    <button type="button" onClick={() => handleEditarClick(lugar)} className="btn btn-editar">
+                      Editar datos
+                    </button>
+                    <button type="button" onClick={() => handleDelete(lugar._id)} className="btn btn-eliminar">
+                      Eliminar
+                    </button>
+                  </div>
+                )}
               </article>
             ))}
           </div>

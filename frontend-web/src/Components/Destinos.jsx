@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext"; // 👈 NUEVO: Importar autenticación
 
 function Destinos() {
+  const { usuario } = useAuth(); // 👈 NUEVO: Extraer usuario de la sesión
+  
+  // 🔽 NUEVO: Control estricto de rol en la vista
+  const esAdmin = usuario?.rol === 'admin';
+
   const [destinos, setDestinos] = useState([]);  
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [administrador, setAdministrador] = useState("");
-  const [zonas, setZonas] = useState([]); // Maneja objetos [{_id, nombre}, {nombre}]
+  const [zonas, setZonas] = useState([]); 
   const [nuevaZona, setNuevaZona] = useState(""); 
   const [editandoId, setEditandoId] = useState(null);
 
   const cargarDestinos = () => {
+    if (!esAdmin) return; // Detener consultas si no es admin
     fetch(import.meta.env.VITE_BACKEND_URL + "/api/destinos")
       .then((resp) => resp.json())
       .then((data) => {
@@ -21,6 +28,18 @@ function Destinos() {
   useEffect(() => {
     cargarDestinos();
   }, []);
+
+  // 🔽 NUEVO: Interceptor visual en caso de acceso no autorizado
+  if (!esAdmin) {
+    return (
+      <div className="container-app" style={{ marginTop: '40px' }}>
+        <div className="alerta-error">
+          <span className="badge-icon">🚫</span>
+          <p><strong>Acceso denegado:</strong> No tienes los permisos necesarios para visualizar la administración de destinos globales del sistema turístico.</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleAgregarZona = () => {
     if (nuevaZona.trim() !== "") {
@@ -58,12 +77,11 @@ function Destinos() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // 💡 CLAVE: Al no haber fotos, construimos un objeto JSON limpio
     const datosDestino = {
       nombre,
       descripcion,
       administrador,
-      zonas // Enviamos la lista de objetos de zona directamente
+      zonas 
     };
 
     const urlBase = `${import.meta.env.VITE_BACKEND_URL}/api/destinos`;
@@ -73,7 +91,7 @@ function Destinos() {
     fetch(urlFetch, {
       method: metodo,
       headers: {
-        "Content-Type": "application/json" // Le avisa al servidor Express que procese el texto como JSON
+        "Content-Type": "application/json" 
       },
       body: JSON.stringify(datosDestino), 
     })
@@ -198,4 +216,5 @@ function Destinos() {
   );
 }
 
+/* El export por defecto se mantiene intacto */
 export default Destinos;

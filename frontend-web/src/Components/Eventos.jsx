@@ -4,6 +4,9 @@ import { useAuth } from "../context/AuthContext";
 function Eventos({ destinoActivoId }) {
   const { usuario } = useAuth();
   
+  // 🔽 NUEVO: Validar si el usuario actual posee el rol de administrador
+  const esAdmin = usuario?.rol === 'admin';
+
   const [eventos, setEventos] = useState([]);
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -12,15 +15,13 @@ function Eventos({ destinoActivoId }) {
   const [imagen, setImagen] = useState(null);
   const [editandoId, setEditandoId] = useState(null);
 
-  // Estados para selectores en cascada y filtros reactivos
   const [destinosLista, setDestinosLista] = useState([]);
   const [zonasFiltradasForm, setZonasFiltradasForm] = useState([]);
   const [destinoForm, setDestinoForm] = useState("");
   const [zonaForm, setZonaForm] = useState("");
   const [filtroZonaListado, setFiltroZonaListado] = useState("");
-  const [filtroTiempo, setFiltroTiempo] = useState("proximos"); // 'proximos' o 'pasados'
+  const [filtroTiempo, setFiltroTiempo] = useState("proximos");
 
-  // 1. Obtener destinos al inicializar para el selector del formulario
   useEffect(() => {
     fetch(import.meta.env.VITE_BACKEND_URL + "/api/destinos")
       .then((res) => res.json())
@@ -30,7 +31,6 @@ function Eventos({ destinoActivoId }) {
       .catch((err) => console.error("Error al cargar destinos secundarios:", err));
   }, []);
 
-  // 2. Filtrado en cascada automático para actualizar las zonas del formulario
   useEffect(() => {
     if (destinoForm) {
       const encontrado = destinosLista.find(d => d._id === destinoForm);
@@ -40,16 +40,12 @@ function Eventos({ destinoActivoId }) {
     }
   }, [destinoForm, destinosLista]);
 
-  // 3. Obtener listado pasándole los Query Params dinámicos de tiempo al backend
   const cargarEventosFiltrados = () => {
     if (!destinoActivoId) return;
-    
     let url = `${import.meta.env.VITE_BACKEND_URL}/api/eventos?destino=${destinoActivoId}&tiempo=${filtroTiempo}`;
-    
     if (filtroZonaListado && filtroZonaListado !== "") {
       url += `&zona=${filtroZonaListado}`;
     }
-
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
@@ -58,25 +54,22 @@ function Eventos({ destinoActivoId }) {
       .catch((err) => console.error("Error al mapear eventos:", err));
   };
 
-  // Re-ejecutar consulta al cambiar de destino principal o alternar el filtro cronológico
   useEffect(() => {
     setFiltroZonaListado("");
     cargarEventosFiltrados();
   }, [destinoActivoId, filtroTiempo]);
 
-  // Re-ejecutar consulta al alternar la zona específica
   useEffect(() => {
     cargarEventosFiltrados();
   }, [filtroZonaListado]);
 
- // Handler para enviar el Formulario (POST / PUT) con Validación Temporal
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!esAdmin) return; // Protección en cliente
 
-    // 👈 NUEVO: Validación estricta de coherencia cronológica
     if (new Date(fechaInicio) >= new Date(fechaFin)) {
       alert("Error: La fecha y hora de inicio debe ser anterior a la fecha y hora de finalización.");
-      return; // Detiene por completo la ejecución y el fetch
+      return;
     }
 
     const formData = new FormData();
@@ -108,8 +101,8 @@ function Eventos({ destinoActivoId }) {
       .catch((err) => console.error("Error en submit:", err));
   };
 
-  // Handler para eliminar un Evento (DELETE)
   const handleDelete = (id) => {
+    if (!esAdmin) return; // Protección en cliente
     if (!window.confirm("¿Deseas remover de manera permanente este evento?")) return;
     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/eventos/${id}`, { method: "DELETE" })
       .then((res) => res.json())
@@ -121,7 +114,6 @@ function Eventos({ destinoActivoId }) {
       });
   };
 
-  // Convierte formatos de fecha ISO de Mongoose al patrón nativo de inputs (YYYY-MM-DDTHH:MM)
   const formatearParaInput = (stringFecha) => {
     if (!stringFecha) return "";
     const d = new Date(stringFecha);
@@ -129,21 +121,19 @@ function Eventos({ destinoActivoId }) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
 
-  // Cargar datos en los inputs al hacer clic en Editar
   const handleEditarClick = (ev) => {
+    if (!esAdmin) return;
     setEditandoId(ev._id);
     setTitulo(ev.titulo);
     setDescripcion(ev.descripcion);
     setFechaInicio(formatearParaInput(ev.fecha_hora_inicio));
     setFechaFin(formatearParaInput(ev.fecha_hora_fin));
     setImagen(ev.imagen); 
-    
     const destinoIdPadre = ev.zona?.destino?._id || ev.zona?.destino || "";
     setDestinoForm(destinoIdPadre);
     setZonaForm(ev.zona?._id || "");
   };
 
-  // Limpiar el formulario
   const cancelarEdicion = () => {
     setEditandoId(null);
     setTitulo("");
@@ -155,65 +145,61 @@ function Eventos({ destinoActivoId }) {
     setImagen(null);
   };
 
-  // Helper para extraer las sub-zonas correspondientes del destino del Header
   const obtenerZonasDelDestinoActivo = () => {
     const actual = destinosLista.find(d => d._id === destinoActivoId);
     return actual && Array.isArray(actual.zonas) ? actual.zonas : [];
   };
-
   return (
-    <div className="seccion-prestadores">
-      {/* COLUMNA IZQUIERDA: FORMULARIO */}
-      <section className="panel-formulario" aria-labelledby="titulo-formulario">
-        <h2 id="titulo-formulario">{editandoId ? "Modificar Evento" : "Planificar Nuevo Evento"}</h2>
-        <form onSubmit={handleSubmit} className="formulario-carga">
-          <div className="form-group">
-            <label htmlFor="titulo">Título del Evento</label>
-            <input id="titulo" type="text" placeholder="Ej. Fiesta de la Tradición" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="descripcion">Descripción</label>
-            <textarea id="descripcion" placeholder="Detalles de las actividades..." value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="fechaInicio">Fecha y Hora de Inicio</label>
-            <input id="fechaInicio" type="datetime-local" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} required />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="fechaFin">Fecha y Hora de Cierre</label>
-            <input id="fechaFin" type="datetime-local" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} required />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="destinoForm">Destino Relacionado</label>
-            <select id="destinoForm" value={destinoForm} onChange={(e) => { setDestinoForm(e.target.value); setZonaForm(""); }} required>
-              <option value="">Seleccione un Destino</option>
-              {destinosLista.map(d => <option key={d._id} value={d._id}>{d.nombre}</option>)}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="zonaForm">Zona Específica</label>
-            <select id="zonaForm" value={zonaForm} onChange={(e) => setZonaForm(e.target.value)} required disabled={!destinoForm}>
-              <option value="">Seleccione una Zona</option>
-              {zonasFiltradasForm.map(z => <option key={z._id} value={z._id}>{z.nombre}</option>)}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="imagen">Imagen Informativa / Comercial</label>
-            <input id="imagen" type="file" accept="image/*" onChange={(e) => setImagen(e.target.files)} />
-          </div>
-
-          <div className="form-acciones">
-            <button type="submit" className="btn btn-primario">{editandoId ? "Actualizar" : "Guardar"}</button>
-            {editandoId && <button type="button" onClick={cancelarEdicion} className="btn btn-secundario">Cancelar</button>}
-          </div>
-        </form>
-      </section>
+    <div 
+      className="seccion-lugares" 
+      style={!esAdmin ? { gridTemplateColumns: '1fr' } : {}}
+    >
+      {/* COLUMNA IZQUIERDA: FORMULARIO (Solo Administradores) */}
+      {esAdmin && (
+        <section className="panel-formulario" aria-labelledby="titulo-formulario">
+          <h2 id="titulo-formulario">{editandoId ? "Modificar Evento" : "Planificar Nuevo Evento"}</h2>
+          <form onSubmit={handleSubmit} className="formulario-carga">
+            <div className="form-group">
+              <label htmlFor="titulo">Título del Evento</label>
+              <input id="titulo" type="text" placeholder="Ej. Fiesta de la Tradición" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="descripcion">Descripción</label>
+              <textarea id="descripcion" placeholder="Detalles de las actividades..." value={descripcion} onChange={(e) => setDescripcion(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="fechaInicio">Fecha y Hora de Inicio</label>
+              <input id="fechaInicio" type="datetime-local" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="fechaFin">Fecha y Hora de Cierre</label>
+              <input id="fechaFin" type="datetime-local" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="destinoForm">Destino Relacionado</label>
+              <select id="destinoForm" value={destinoForm} onChange={(e) => { setDestinoForm(e.target.value); setZonaForm(""); }} required>
+                <option value="">Seleccione un Destino</option>
+                {destinosLista.map(d => <option key={d._id} value={d._id}>{d.nombre}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="zonaForm">Zona Específica</label>
+              <select id="zonaForm" value={zonaForm} onChange={(e) => setZonaForm(e.target.value)} required disabled={!destinoForm}>
+                <option value="">Seleccione una Zona</option>
+                {zonasFiltradasForm.map(z => <option key={z._id} value={z._id}>{z.nombre}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="imagen">Imagen Informativa</label>
+              <input id="imagen" type="file" accept="image/*" onChange={(e) => setImagen(e.target.files)} />
+            </div>
+            <div className="form-acciones">
+              <button type="submit" className="btn btn-primario">{editandoId ? "Actualizar" : "Guardar"}</button>
+              {editandoId && <button type="button" onClick={cancelarEdicion} className="btn btn-secundario">Cancelar</button>}
+            </div>
+          </form>
+        </section>
+      )}
 
       {/* COLUMNA DERECHA: LISTADO */}
       <section className="panel-listado" aria-labelledby="titulo-listado">
@@ -222,12 +208,9 @@ function Eventos({ destinoActivoId }) {
             <label htmlFor="filtro-zona" className="filtro-label">Zona:</label>
             <select id="filtro-zona" value={filtroZonaListado} onChange={(e) => setFiltroZonaListado(e.target.value)} className="form-select-filtro">
               <option value="">Todas las zonas</option>
-              {obtenerZonasDelDestinoActivo().map((z) => (
-                <option key={z._id} value={z._id}>{z.nombre}</option>
-              ))}
+              {obtenerZonasDelDestinoActivo().map((z) => <option key={z._id} value={z._id}>{z.nombre}</option>)}
             </select>
           </div>
-
           <div className="filtro-contenedor" style={{ flex: 1, marginBottom: 0 }}>
             <label htmlFor="filtro-tiempo" className="filtro-label">Cronología:</label>
             <select id="filtro-tiempo" value={filtroTiempo} onChange={(e) => setFiltroTiempo(e.target.value)} className="form-select-filtro">
@@ -266,10 +249,13 @@ function Eventos({ destinoActivoId }) {
                     </div>
                   </div>
 
-                  <div className="tarjeta-acciones">
-                    <button type="button" onClick={() => handleEditarClick(ev)} className="btn btn-editar">Editar datos</button>
-                    <button type="button" onClick={() => handleDelete(ev._id)} className="btn btn-eliminar">Eliminar</button>
-                  </div>
+                  {/* 🔽 NUEVO: Renderizado condicional de acciones de administración */}
+                  {esAdmin && (
+                    <div className="tarjeta-acciones">
+                      <button type="button" onClick={() => handleEditarClick(ev)} className="btn btn-editar">Editar datos</button>
+                      <button type="button" onClick={() => handleDelete(ev._id)} className="btn btn-eliminar">Eliminar</button>
+                    </div>
+                  )}
                 </article>
               );
             })}

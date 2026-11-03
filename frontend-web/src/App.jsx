@@ -30,37 +30,30 @@ function ContenidoPanel() {
 
   return (
     <div className="container-app">
-      <header className="header-sitio">
-        <div className="header-brand">
-          <div className="header-logo-wrapper">
-            <img src={logo} alt="Logotipo oficial de Gestión Turística" className="header-logo" />
-          </div>
+     <header className="header-sitio">
+  <div className="header-brand">
+    <div className="header-logo-wrapper">
+      <img src={logo} alt="Logotipo oficial de Gestión Turística" className="header-logo" />
+    </div>
 
-          {/* El select ahora es dinámico con datos de la DB */}
-          <select 
-            name="destino-activo" 
-            value={destinoSeleccionadoId} 
-            onChange={(e) => setDestinoSeleccionadoId(e.target.value)} 
-            className="header-select"
-          >
-            {destinos.length === 0 && <option value="">Cargando destinos...</option>}
-            {destinos.map((dest) => (
-              <option key={dest._id} value={dest._id}>
-                {dest.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <Menu seccion={seccion} setSeccion={setSeccion} /> 
-
-        <div className="header-logout-container" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '0.9rem', color: '#555' }}>Hola, {usuario?.nombre}</span>
-          <button onClick={logout} style={{ padding: '6px 12px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-            Salir
-          </button>
-        </div>
-      </header>
+    <select 
+      name="destino-activo" 
+      value={destinoSeleccionadoId} 
+      onChange={(e) => setDestinoSeleccionadoId(e.target.value)} 
+      className="header-select"
+    >
+      {destinos.length === 0 && <option value="">Cargando destinos...</option>}
+      {destinos.map((dest) => (
+        <option key={dest._id} value={dest._id}>
+          {dest.nombre}
+        </option>
+      ))}
+    </select>
+  </div>
+  
+  {/* El menú ahora contiene de forma autónoma el saludo y el botón Salir */}
+  <Menu seccion={seccion} setSeccion={setSeccion} /> 
+</header>
 
       <main className="contenido">
         {/* ENVIAMOS EL DESTINO SELECCIONADO COMO PROP A LUGARES */}
